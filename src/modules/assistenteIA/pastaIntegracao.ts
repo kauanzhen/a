@@ -6,6 +6,7 @@
  * Estrutura da pasta:
  *   LEIA-ME.txt                         explica a pasta (gravado pelo sistema)
  *   contexto/contexto-contabil.json     plano de contas, períodos... (gravado pelo sistema)
+ *   fontes/                             PDFs, extratos e conversas exportadas para o Claude ler (do usuário)
  *   entrada/*.json                      lotes de lançamentos sugeridos (gravados pelo Claude)
  *   processados/                        lotes já importados (movidos pelo sistema)
  *   descartados/                        lotes recusados pelo usuário (movidos pelo sistema)
@@ -13,7 +14,7 @@
 import { db } from '../../db/db';
 import type { ContextoContabil } from './contextoIA';
 
-export const PASTAS = { contexto: 'contexto', entrada: 'entrada', processados: 'processados', descartados: 'descartados' } as const;
+export const PASTAS = { contexto: 'contexto', fontes: 'fontes', entrada: 'entrada', processados: 'processados', descartados: 'descartados' } as const;
 export const ARQUIVO_CONTEXTO = 'contexto-contabil.json';
 const CHAVE_CONFIG = 'pastaIntegracao';
 
@@ -60,6 +61,8 @@ Esta pasta liga o sistema Contábil Escola ao Claude (Cowork, Claude Code ou out
 
   contexto/contexto-contabil.json  -> gravado pelo sistema: empresa, plano de contas, períodos abertos,
                                       centros de custo e o formato de resposta esperado.
+  fontes/                          -> coloque aqui o que o Claude deve ler: PDFs de notas fiscais, extratos
+                                      (CSV/OFX), conversas exportadas do WhatsApp (.txt), recibos.
   entrada/                         -> o Claude grava aqui os lotes de lançamentos sugeridos (*.json),
                                       no formato "contabil-escola/lote-lancamentos".
   processados/                     -> o sistema move para cá os lotes importados.

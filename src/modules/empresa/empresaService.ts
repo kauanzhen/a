@@ -2,7 +2,7 @@ import { db } from '../../db/db';
 import { registrarAuditoria } from '../../db/auditoria';
 import type { Empresa } from '../../db/types';
 import { agoraTimestamp, montarISO } from '../../lib/date';
-import { UFS, formatarCNPJ, somenteDigitos, validarCNAE, validarCNPJ } from '../../lib/documentos';
+import { UFS, formatarCNPJ, normalizarCNPJ, somenteDigitos, validarCNAE, validarCNPJ } from '../../lib/documentos';
 import { interpretarMascara, reformatarCodigo } from '../../lib/mascara';
 import { gerarPlanoPadrao } from '../planoContas/planoPadrao';
 import { centrosCustoPadrao, historicosPadrao } from '../lancamentos/cadastrosPadrao';
@@ -36,6 +36,12 @@ export function validarEmpresa(d: DadosEmpresa, opcoes?: { exigirCincoNiveis?: b
   return erros;
 }
 
+async function exigirCnpjUnico(cnpj: string, idAtual?: number) {
+  const alvo = normalizarCNPJ(cnpj);
+  const repetida = (await db.empresas.toArray()).find((e) => e.id !== idAtual && normalizarCNPJ(e.cnpj) === alvo);
+  if (repetida) throw new Error(`Já existe a empresa "${repetida.razaoSocial}" com o CNPJ ${repetida.cnpj}.`);
+}
+
 function normalizar(d: DadosEmpresa): DadosEmpresa {
   return {
     ...d,
@@ -54,6 +60,7 @@ export async function criarEmpresa(dados: DadosEmpresa, opcoes: OpcoesNovaEmpres
     'rw',
     [db.empresas, db.contas, db.historicos, db.centrosCusto, db.exercicios, db.periodos, db.auditoria],
     async () => {
+      await exigirCnpjUnico(d.cnpj);
       const empresa: Empresa = { ...d, criadaEm: agoraTimestamp() };
       const empresaId = (await db.empresas.add(empresa)) as number;
       if (opcoes.carregarPlanoPadrao) {
@@ -82,6 +89,7 @@ export async function atualizarEmpresa(id: number, dados: DadosEmpresa): Promise
   await db.transaction('rw', db.empresas, db.contas, db.auditoria, async () => {
     const antes = await db.empresas.get(id);
     if (!antes) throw new Error('Empresa não encontrada.');
+    await exigirCnpjUnico(d.cnpj, id);
     if (antes.mascaraPlano !== d.mascaraPlano) {
       const de = interpretarMascara(antes.mascaraPlano);
       const para = interpretarMascara(d.mascaraPlano);

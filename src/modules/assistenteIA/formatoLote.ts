@@ -6,8 +6,12 @@
  * Excel e o usuário aprova, um a um, o que entra na contabilidade.
  */
 import type { FormatoImportacao } from '../../db/types';
-import { validarImportacao, type ContextoImportacao, type ResultadoValidacao } from '../importacao/validador';
+import { localizarCentro, validarImportacao, type ContextoImportacao, type ResultadoValidacao } from '../importacao/validador';
 import type { Mapeamento } from '../importacao/colunas';
+import type { RascunhoLancamento } from '../lancamentos/partidas';
+import { localizarConta } from '../planoContas/indiceContas';
+import { interpretarData } from '../../lib/date';
+import { interpretarMoeda } from '../../lib/money';
 
 export const IDENTIFICADOR_LOTE = 'contabil-escola/lote-lancamentos';
 export const VERSAO_LOTE = 1;
@@ -247,4 +251,27 @@ export function descreverOrigem(l: LancamentoIA): string {
     l.justificativa && `Justificativa: ${l.justificativa}`,
   ];
   return partes.filter(Boolean).join(' ');
+}
+
+/**
+ * Converte uma sugestão (mesmo inválida) num rascunho para o editor de lançamentos,
+ * para o usuário corrigir à mão o que a IA errou.
+ */
+export function rascunhoDaSugestao(l: LancamentoIA, ctx: ContextoImportacao): RascunhoLancamento {
+  return {
+    data: interpretarData(l.data) ?? '',
+    documento: l.documento || undefined,
+    historico: l.historico,
+    observacao: descreverOrigem(l),
+    partidas: l.partidas.map((p) => {
+      const valor = interpretarMoeda(p.valor);
+      return {
+        contaId: localizarConta(p.conta, ctx.indice, ctx.mascara)?.id ?? 0,
+        tipo: p.tipo === 'C' ? 'C' : 'D',
+        valor: valor && valor > 0 ? valor : 0,
+        centroCustoId: localizarCentro(p.centroCusto, ctx.centros)?.id,
+        historico: p.historico || undefined,
+      };
+    }),
+  };
 }

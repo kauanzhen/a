@@ -17,7 +17,7 @@ describe('backup JSON', () => {
   it('restaura 100% dos dados', async () => {
     await garantirTabelasPadrao();
     const empresaId = await criarEmpresaTeste();
-    await criarEmpresaTeste(2025);
+    await criarEmpresaTeste(2025, '12.ABC.345/01DE-35');
     const banco = await contaPorCodigo(empresaId, '1.1.1.02.0001');
     const capital = await contaPorCodigo(empresaId, '2.3.1.01.0001');
     const l = await salvarLancamento(empresaId, {

@@ -10,12 +10,12 @@ export async function limparBanco() {
 }
 
 /** Cria uma empresa de teste com plano padrão e exercício 2026 aberto. */
-export async function criarEmpresaTeste(ano = 2026): Promise<number> {
+export async function criarEmpresaTeste(ano = 2026, cnpj = '11.222.333/0001-81'): Promise<number> {
   return criarEmpresa(
     {
       ...empresaVazia(),
       razaoSocial: 'Empresa Teste Ltda',
-      cnpj: '11.222.333/0001-81',
+      cnpj,
       cnae: '4789099',
     },
     { carregarPlanoPadrao: true, anoExercicio: ano },

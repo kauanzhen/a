@@ -1,0 +1,77 @@
+{
+  "formato": "contabil-escola/lote-lancamentos",
+  "versao": 1,
+  "empresaCnpj": "EX.EMP.LO0/0001-54",
+  "geradoPor": "Claude (exemplo da skill lancamentos-contabeis)",
+  "geradoEm": "2026-03-12T18:00:00.000Z",
+  "lancamentos": [
+    {
+      "id": "L1",
+      "data": "2026-03-05",
+      "documento": "TED",
+      "historico": "Pagamento de aluguel ref. 03/2026 — Imobiliária Exemplo",
+      "partidas": [
+        { "conta": "5.1.2.01.0001", "tipo": "D", "valor": 3500.0, "centroCusto": "", "historico": "" },
+        { "conta": "1.1.1.02.0001", "tipo": "C", "valor": 3500.0, "centroCusto": "", "historico": "" }
+      ],
+      "origem": {
+        "tipo": "email",
+        "referencia": "financeiro@imobiliaria-exemplo.ficticio — 05/03/2026 — \"Comprovante aluguel março\"",
+        "trecho": "aluguel de março/2026 da loja, R$ 3.500,00, pago hoje por TED do Banco Exemplo"
+      },
+      "confianca": "alta",
+      "justificativa": "Despesa administrativa de aluguel do próprio mês, paga pela conta bancária (regime de competência e caixa coincidem).",
+      "duvidas": []
+    },
+    {
+      "id": "L2",
+      "data": "2026-03-08",
+      "documento": "NF 2045",
+      "historico": "Compra de mercadorias conforme NF nº 2045 — Fornecedor Exemplo",
+      "partidas": [
+        { "conta": "1.1.3.01.0001", "tipo": "D", "valor": 9840.0, "centroCusto": "", "historico": "" },
+        { "conta": "1.1.2.03.0001", "tipo": "D", "valor": 2160.0, "centroCusto": "", "historico": "ICMS destacado na NF nº 2045" },
+        { "conta": "2.1.1.01.0001", "tipo": "C", "valor": 12000.0, "centroCusto": "", "historico": "" }
+      ],
+      "origem": {
+        "tipo": "mensagem",
+        "referencia": "WhatsApp — Fornecedor Exemplo — 08/03/2026 10:14",
+        "trecho": "NF 2045 das mercadorias ... total R$ 12.000,00, ICMS destacado de R$ 2.160,00. O boleto vence em 07/04/2026."
+      },
+      "confianca": "media",
+      "justificativa": "Compra a prazo de mercadorias para revenda. A empresa é do Lucro Presumido e contribuinte do ICMS, então o ICMS destacado é recuperável (vai para o Ativo). PIS/COFINS cumulativos não geram crédito.",
+      "duvidas": ["Confirmar que a mercadoria é para revenda (se for uso/consumo, o ICMS não é recuperável).", "A data da entrada usada foi a da mensagem; confirme a data de emissão/entrada da NF."]
+    },
+    {
+      "id": "L3",
+      "data": "2026-03-10",
+      "documento": "Extrato",
+      "historico": "Tarifa bancária de manutenção de conta ref. 03/2026",
+      "partidas": [
+        { "conta": "5.2.1.01.0002", "tipo": "D", "valor": 45.9, "centroCusto": "", "historico": "" },
+        { "conta": "1.1.1.02.0001", "tipo": "C", "valor": 45.9, "centroCusto": "", "historico": "" }
+      ],
+      "origem": { "tipo": "mensagem", "referencia": "SMS do Banco Exemplo — 10/03/2026", "trecho": "tarifa de manutenção de conta R$ 45,90 debitada em 10/03" },
+      "confianca": "alta",
+      "justificativa": "Tarifa bancária é despesa financeira debitada diretamente na conta corrente.",
+      "duvidas": []
+    },
+    {
+      "id": "L4",
+      "data": "2026-03-12",
+      "documento": "NF 15",
+      "historico": "Recebimento de cliente ref. NF nº 15 — Mercadinho Fictício",
+      "partidas": [
+        { "conta": "1.1.1.01.0001", "tipo": "D", "valor": 4000.0, "centroCusto": "", "historico": "" },
+        { "conta": "1.1.2.01.0001", "tipo": "C", "valor": 4000.0, "centroCusto": "", "historico": "" }
+      ],
+      "origem": { "tipo": "mensagem", "referencia": "Mensagem do sócio — 12/03/2026", "trecho": "Recebi hoje no caixa R$ 4.000,00 do cliente Mercadinho Fictício, referente à NF 15 de fevereiro." },
+      "confianca": "alta",
+      "justificativa": "Baixa de duplicata a receber: a receita já foi reconhecida na venda (NF 15, fevereiro); agora só entra dinheiro no caixa e sai o direito de Clientes.",
+      "duvidas": ["Conferir se a venda da NF 15 foi lançada a prazo em Clientes; se não foi, lance a venda antes."]
+    }
+  ],
+  "naoLancados": [
+    { "referencia": "E-mail vendas@papelaria-ficticia.exemplo — 11/03/2026 — \"Orçamento\"", "motivo": "Orçamento aguardando aprovação não é fato contábil (não há compra, obrigação nem pagamento)." }
+  ]
+}

@@ -77,7 +77,7 @@ export function interpretarDC(v: unknown): Natureza | null {
   return null;
 }
 
-function localizarCentro(v: unknown, centros: CentroCusto[]): CentroCusto | undefined {
+export function localizarCentro(v: unknown, centros: CentroCusto[]): CentroCusto | undefined {
   const t = texto(v);
   if (!t) return undefined;
   const n = normalizarCabecalho(t);
