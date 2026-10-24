@@ -1,0 +1,27 @@
+# ---- .NET ----
+bin/
+obj/
+out/
+*.user
+*.suo
+.vs/
+
+# ---- Artefatos de publicação ----
+publish/
+*.pfx
+
+# ---- Banco de dados e segredos locais (NUNCA versionar) ----
+*.db
+*.db-wal
+*.db-shm
+dados/
+segredos/
+*.secret
+
+# ---- Logs ----
+*.log
+logs/
+
+# ---- SO ----
+Thumbs.db
+desktop.ini

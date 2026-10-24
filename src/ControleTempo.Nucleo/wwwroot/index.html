@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f172a" />
+  <title>Controle de Tempo — Painel</title>
+  <link rel="stylesheet" href="estilo.css" />
+</head>
+<body>
+
+<!-- ============ TELA DE LOGIN / PRIMEIRO ACESSO ============ -->
+<section id="tela-login" class="tela centralizar">
+  <div class="cartao-login">
+    <h1>⏱️ Controle de Tempo</h1>
+
+    <!-- Login normal -->
+    <form id="form-login" class="oculto">
+      <p class="sub">Painel do responsável</p>
+      <label>Senha de administrador
+        <input type="password" id="login-senha" autocomplete="current-password" required />
+      </label>
+      <button type="submit" class="btn primario">Entrar</button>
+      <p class="erro" id="login-erro"></p>
+    </form>
+
+    <!-- Primeiro acesso: define a senha -->
+    <form id="form-admin" class="oculto">
+      <p class="sub">Primeiro acesso — defina a senha mestra</p>
+      <label>Nova senha (mín. 6 caracteres)
+        <input type="password" id="admin-senha" required />
+      </label>
+      <label>Confirme a senha
+        <input type="password" id="admin-confirma" required />
+      </label>
+      <button type="submit" class="btn primario">Definir senha</button>
+      <p class="erro" id="admin-erro"></p>
+    </form>
+  </div>
+</section>
+
+<!-- ============ APLICAÇÃO ============ -->
+<section id="app" class="oculto">
+  <header class="topo">
+    <span class="logo">⏱️ Controle de Tempo</span>
+    <button id="btn-sair" class="btn fantasma pequeno">Sair</button>
+  </header>
+
+  <nav class="abas">
+    <button class="aba ativa" data-aba="painel">Painel</button>
+    <button class="aba" data-aba="usuarios">Usuários</button>
+    <button class="aba" data-aba="pedidos">Pedidos <span id="badge-pedidos" class="badge oculto">0</span></button>
+    <button class="aba" data-aba="relatorios">Relatórios</button>
+    <button class="aba" data-aba="config">Ajustes</button>
+  </nav>
+
+  <main>
+    <!-- PAINEL AO VIVO -->
+    <div id="painel" class="pagina">
+      <div id="cartao-status" class="cartao status">
+        <div class="status-cabecalho">
+          <span id="status-estado" class="pill">—</span>
+          <span id="status-atualizado" class="mini"></span>
+        </div>
+        <div class="status-usuario" id="status-usuario">Ninguém usando o computador</div>
+        <div class="timer-grande" id="status-tempo">--:--</div>
+        <div class="status-modo mini" id="status-modo"></div>
+      </div>
+
+      <div class="acoes-rapidas">
+        <button class="btn perigo" data-acao="bloquear">🔒 Bloquear</button>
+        <button class="btn sucesso" data-acao="liberar">🔓 Liberar</button>
+        <button class="btn aviso" data-acao="pausar">⏸️ Pausar</button>
+        <button class="btn aviso" data-acao="retomar">▶️ Retomar</button>
+        <button class="btn fantasma" data-acao="encerrar">🚪 Encerrar sessão</button>
+      </div>
+
+      <div class="cartao">
+        <h3>Ajustar tempo do usuário em uso</h3>
+        <div class="linha-tempo">
+          <button class="btn chip" data-add="5">+5 min</button>
+          <button class="btn chip" data-add="15">+15 min</button>
+          <button class="btn chip" data-add="30">+30 min</button>
+          <button class="btn chip" data-add="60">+1 h</button>
+          <button class="btn chip perigo" data-add="-15">-15 min</button>
+        </div>
+        <p class="mini" id="ajuste-aviso">Selecione um usuário em uso no Painel.</p>
+      </div>
+    </div>
+
+    <!-- USUÁRIOS -->
+    <div id="usuarios" class="pagina oculto">
+      <button class="btn primario" id="btn-novo-usuario">+ Novo usuário</button>
+      <div id="lista-usuarios" class="grade"></div>
+    </div>
+
+    <!-- PEDIDOS -->
+    <div id="pedidos" class="pagina oculto">
+      <h3>Pedidos de mais tempo</h3>
+      <div id="lista-pedidos" class="grade"></div>
+      <p class="mini" id="pedidos-vazio">Nenhum pedido pendente.</p>
+    </div>
+
+    <!-- RELATÓRIOS -->
+    <div id="relatorios" class="pagina oculto">
+      <div class="linha-tempo">
+        <label class="mini">Período:
+          <select id="rel-dias">
+            <option value="7">7 dias</option>
+            <option value="30" selected>30 dias</option>
+            <option value="90">90 dias</option>
+          </select>
+        </label>
+        <a class="btn fantasma pequeno" id="btn-csv" href="#">⬇️ Exportar CSV</a>
+      </div>
+
+      <div class="cartao">
+        <h3>Uso por dia (minutos)</h3>
+        <canvas id="grafico-dia" height="160"></canvas>
+      </div>
+      <div class="cartao">
+        <h3>Comparativo entre usuários (minutos no período)</h3>
+        <canvas id="grafico-usuarios" height="160"></canvas>
+      </div>
+      <div class="cartao">
+        <h3>Horários mais usados</h3>
+        <canvas id="grafico-horas" height="140"></canvas>
+      </div>
+      <div class="cartao">
+        <h3>Sessões recentes</h3>
+        <div id="tabela-sessoes" class="tabela"></div>
+      </div>
+    </div>
+
+    <!-- AJUSTES -->
+    <div id="config" class="pagina oculto">
+      <form id="form-config" class="cartao">
+        <label>Avisos antes do fim (minutos, separados por vírgula)
+          <input type="text" id="cfg-avisos" placeholder="10,5,1" />
+        </label>
+        <label class="check"><input type="checkbox" id="cfg-som" /> Aviso sonoro</label>
+        <label class="check"><input type="checkbox" id="cfg-push" /> Notificações push no celular</label>
+        <label class="check"><input type="checkbox" id="cfg-backup" /> Backup automático do banco</label>
+        <label>Porta do servidor web
+          <input type="number" id="cfg-porta" min="1" max="65535" />
+        </label>
+        <label class="check"><input type="checkbox" id="cfg-https" /> Usar HTTPS local</label>
+        <label>Atalho de emergência (somente leitura)
+          <input type="text" id="cfg-atalho" />
+        </label>
+        <button type="submit" class="btn primario">Salvar ajustes</button>
+        <p class="mini" id="config-aviso"></p>
+      </form>
+    </div>
+  </main>
+</section>
+
+<!-- ============ MODAL DE USUÁRIO ============ -->
+<div id="modal-usuario" class="modal oculto">
+  <div class="modal-conteudo">
+    <h3 id="modal-titulo">Novo usuário</h3>
+    <form id="form-usuario">
+      <input type="hidden" id="u-id" />
+      <label>Nome <input type="text" id="u-nome" required /></label>
+      <label>Senha <input type="password" id="u-senha" placeholder="(deixe em branco para manter)" /></label>
+      <label>Modo
+        <select id="u-modo">
+          <option value="0">Tempo limite (por dia)</option>
+          <option value="1">Créditos (saldo)</option>
+        </select>
+      </label>
+      <label id="campo-limite">Limite diário (minutos)
+        <input type="number" id="u-limite" min="0" value="120" />
+      </label>
+      <label id="campo-saldo" class="oculto">Saldo de créditos (minutos)
+        <input type="number" id="u-saldo" min="0" value="0" />
+      </label>
+      <label>Ao esgotar
+        <select id="u-acao">
+          <option value="0">Bloquear a tela</option>
+          <option value="1">Fazer logoff</option>
+          <option value="2">Suspender</option>
+          <option value="3">Desligar</option>
+          <option value="4">Apenas avisar</option>
+        </select>
+      </label>
+      <label>Pausar após inatividade (segundos, 0 = nunca)
+        <input type="number" id="u-inatividade" min="0" value="120" />
+      </label>
+      <label>Horários permitidos (ex.: 14:00-18:00;19:00-21:00 — vazio = sempre)
+        <input type="text" id="u-horarios" placeholder="vazio = sempre" />
+      </label>
+      <label class="check"><input type="checkbox" id="u-pedir" checked /> Pode pedir mais tempo</label>
+      <label class="check"><input type="checkbox" id="u-ativo" checked /> Ativo</label>
+      <div class="modal-botoes">
+        <button type="button" class="btn fantasma" id="btn-cancelar">Cancelar</button>
+        <button type="submit" class="btn primario">Salvar</button>
+      </div>
+      <p class="erro" id="usuario-erro"></p>
+    </form>
+  </div>
+</div>
+
+<div id="aviso-topo" class="toast oculto"></div>
+
+<script src="app.js"></script>
+</body>
+</html>

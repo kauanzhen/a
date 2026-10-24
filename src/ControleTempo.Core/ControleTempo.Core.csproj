@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    ControleTempo.Core
+    ==================
+    Biblioteca central, independente de plataforma (net8.0).
+    Contém o modelo de domínio, a camada de dados (SQLite), o motor de
+    contagem de tempo/créditos e os serviços de segurança (hash de senha,
+    proteção de segredos). Todo o controle vive aqui: a interface web, o
+    serviço do Windows e o overlay apenas consomem esta biblioteca.
+
+    Mantemos o Core sem dependências de Windows de propósito, para que a
+    lógica possa ser testada em qualquer máquina e para separar claramente
+    "regra de negócio" de "integração com o sistema operacional".
+  -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>ControleTempo.Core</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Acesso ao SQLite (biblioteca oficial da Microsoft). -->
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.10" />
+  </ItemGroup>
+
+</Project>
