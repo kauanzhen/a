@@ -103,28 +103,24 @@ public sealed class ContextoControle
             string aviso = _avisoPendente;
             _avisoPendente = string.Empty;
 
-            // Deriva o comando a partir do estado quando o motor acabou de bloquear.
-            var comando = _comandoPendente;
+            bool desativado = SistemaDesativado();
+            // Quando desativado (emergência), o PC fica liberado: manda liberar a tela.
+            var comando = desativado ? ComandoOverlay.LiberarTela : _comandoPendente;
+            _comandoPendente = ComandoOverlay.Nenhum; // entregue uma única vez; o overlay
+                                                      // também se reconcilia pelo estado
             return new PacoteOverlay
             {
                 Estado = Motor.EstadoAtual(), // snapshot somente-leitura (não consome tempo)
                 Comando = comando,
                 Aviso = aviso,
-                AvisoSonoro = cfg?.AvisoSonoro ?? true
+                AvisoSonoro = cfg?.AvisoSonoro ?? true,
+                SistemaDesativado = desativado
             };
         }
     }
 
-    public ComandoOverlay ConsumirComando()
-    {
-        lock (_trava)
-        {
-            var c = _comandoPendente;
-            if (c == ComandoOverlay.Logoff || c == ComandoOverlay.Suspender || c == ComandoOverlay.Desligar)
-                _comandoPendente = ComandoOverlay.Nenhum; // ações pontuais consomem
-            return c;
-        }
-    }
+    /// <summary>Sistema desativado em modo de emergência (flag criada pela recuperação).</summary>
+    public bool SistemaDesativado() => File.Exists(Caminhos.ArquivoDesativado);
 
     // ============================================================
     //  AUTENTICAÇÃO DO ADMIN

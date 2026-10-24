@@ -1,6 +1,7 @@
 using System.Globalization;
 using ControleTempo.Core.Dados;
 using ControleTempo.Core.Modelos;
+using ControleTempo.Core.Seguranca;
 
 namespace ControleTempo.Core.Servicos;
 
@@ -47,6 +48,7 @@ public sealed class MotorTempo
     private double _idleSegundos;        // tempo sem atividade acumulado
     private int _consumidoSessao;        // segundos consumidos na sessão corrente
     private double _desdeUltimaGravacao;  // controla a persistência periódica
+    private bool _esgotado;               // evita redisparar a ação ao esgotar
     private readonly HashSet<int> _avisosDisparados = new();
 
     public MotorTempo(Repositorio repo, RelogioConfiavel relogio)
@@ -105,6 +107,7 @@ public sealed class MotorTempo
             _acumuladorConsumo = 0;
             _idleSegundos = 0;
             _consumidoSessao = 0;
+            _esgotado = false;
             _avisosDisparados.Clear();
 
             _repo.Registrar(TipoEvento.InicioSessao, u.Id, $"{u.Nome} iniciou sessão.");
@@ -132,6 +135,11 @@ public sealed class MotorTempo
 
             _estado = EstadoMaquina.EmUso;
             _pausado = false;
+            _esgotado = false;
+            // A sessão anterior foi fechada no bloqueio; abre uma nova para o histórico.
+            _sessaoId = _repo.AbrirSessao(_usuario.Id);
+            _consumidoSessao = 0;
+            _acumuladorConsumo = 0;
             _avisosDisparados.Clear();
             _repo.Registrar(TipoEvento.Desbloqueio, _usuario.Id, $"{_usuario.Nome} reautenticou.");
             return (true, "Sessão retomada.");
@@ -158,14 +166,19 @@ public sealed class MotorTempo
             string? avisoNovo = null;
             AcaoAoEsgotar? acao = null;
 
-            if (_usuario is not null && _estado == EstadoMaquina.EmUso)
+            // Processa enquanto EmUso ou enquanto pausado AUTOMATICAMENTE por
+            // inatividade (para poder retomar quando a atividade voltar). A pausa
+            // MANUAL do admin não entra aqui e só sai com "Retomar".
+            if (_usuario is not null &&
+                (_estado == EstadoMaquina.EmUso ||
+                 (_estado == EstadoMaquina.Pausado && _pausadoPorInatividade)))
             {
                 VirarDiaSeNecessario(_usuario);
 
-                // Fora do horário permitido => trata como esgotamento imediato.
+                // Fora do horário permitido => trata como esgotamento imediato (uma vez).
                 if (!DentroDoHorario(_usuario))
                 {
-                    acao = EsgotarInterno("Fora do horário permitido.");
+                    if (!_esgotado) { _esgotado = true; acao = EsgotarInterno("Fora do horário permitido."); }
                 }
                 else
                 {
@@ -198,8 +211,13 @@ public sealed class MotorTempo
 
                             avisoNovo = VerificarAvisos(_usuario);
 
-                            if (_usuario.RestanteSegundos <= 0)
+                            // Dispara a ação de esgotamento uma única vez (importante
+                            // sobretudo no modo "apenas avisar", que mantém EmUso).
+                            if (_usuario.RestanteSegundos <= 0 && !_esgotado)
+                            {
+                                _esgotado = true;
                                 acao = EsgotarInterno("Tempo/crédito esgotado.");
+                            }
                         }
                     }
                 }
@@ -256,6 +274,7 @@ public sealed class MotorTempo
             if (_usuario.RestanteSegundos <= 0) return; // só libera se houver saldo
             _estado = EstadoMaquina.EmUso;
             _pausado = false;
+            _esgotado = false;
             _avisosDisparados.Clear();
             _repo.Registrar(TipoEvento.Desbloqueio, _usuario.Id, "Liberação manual pelo admin.");
         }
@@ -288,6 +307,12 @@ public sealed class MotorTempo
             if (u.Modo == ModoControle.Creditos) u.SaldoCreditosSegundos += segundos;
             else u.ConsumidoHojeSegundos = Math.Max(0, u.ConsumidoHojeSegundos - segundos);
             _repo.AtualizarUsuario(u);
+            // Se é o usuário em uso e voltou a ter saldo, rearmar avisos/esgotamento.
+            if (_usuario?.Id == u.Id && u.RestanteSegundos > 0)
+            {
+                _esgotado = false;
+                _avisosDisparados.Clear();
+            }
             _repo.Registrar(u.Modo == ModoControle.Creditos ? TipoEvento.CreditoRecarregado : TipoEvento.TempoAdicionado,
                 u.Id, $"+{segundos}s adicionados.", origem);
         }

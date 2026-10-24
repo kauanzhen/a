@@ -27,6 +27,17 @@ if (!ctx.Repo.PossuiConfig())
 
 var cfg = ctx.Repo.ObterConfig()!;
 
+// Publica o endereço local (loopback) para o overlay/recovery descobrirem a
+// porta/esquema sem precisar abrir o banco. Fica na pasta de dados protegida.
+string esquemaLocal = cfg.UsarHttps && OperatingSystem.IsWindows() ? "https" : "http";
+try
+{
+    File.WriteAllText(
+        Path.Combine(ControleTempo.Core.Servicos.Caminhos.PastaDados, "endpoint.txt"),
+        $"{esquemaLocal}://127.0.0.1:{cfg.PortaWeb}");
+}
+catch { /* ignora falha de escrita do arquivo de descoberta */ }
+
 // Configura o Kestrel para ouvir em todas as interfaces da rede local, de modo
 // que o celular do admin alcance o painel pelo IP da máquina.
 builder.WebHost.ConfigureKestrel(opcoes =>

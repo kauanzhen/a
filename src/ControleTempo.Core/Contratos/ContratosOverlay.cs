@@ -33,6 +33,9 @@ public sealed record PacoteOverlay
 
     /// <summary>Tocar som junto com o aviso.</summary>
     public bool AvisoSonoro { get; init; }
+
+    /// <summary>Sistema desativado em modo de emergência: o PC fica liberado.</summary>
+    public bool SistemaDesativado { get; init; }
 }
 
 /// <summary>Batimento que o overlay envia ao serviço, reportando atividade do usuário.</summary>

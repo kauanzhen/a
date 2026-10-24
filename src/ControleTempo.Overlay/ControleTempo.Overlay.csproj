@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    ControleTempo.Overlay
+    =====================
+    Aplicativo WPF que roda na SESSÃO INTERATIVA do usuário (iniciado no logon).
+    Responsável por:
+      - exibir o timer sempre no topo (contagem regressiva colorida);
+      - mostrar a tela de login (para a criança iniciar a sessão) e a tela de
+        bloqueio/reautenticação quando o tempo esgota;
+      - reportar a inatividade do usuário ao serviço;
+      - executar logoff/suspender/desligar quando o serviço mandar.
+    A contagem NÃO é feita aqui — o overlay só exibe e obedece. Fechar o overlay
+    não pausa nem zera o relógio (o núcleo continua contando).
+
+    A interface é construída em C# (sem XAML) para manter o projeto simples e
+    fácil de compilar. Alvo net8.0-windows com WPF.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <OutputType>WinExe</OutputType>
+    <UseWPF>true</UseWPF>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>ControleTempo.Overlay</RootNamespace>
+    <!-- Fornecemos nosso próprio Main (sem App.xaml). -->
+    <EnableDefaultApplicationDefinition>false</EnableDefaultApplicationDefinition>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ControleTempo.Core\ControleTempo.Core.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+
+  <!--
+    ControleTempo.Watchdog
+    ======================
+    Segundo processo de resiliência (anti-tamper). Roda como Serviço do Windows
+    independente e vigia o serviço principal (ControleTempo): se ele for
+    encerrado/morto, reinicia-o. O serviço principal, por sua vez, vigia este
+    watchdog por um arquivo de "heartbeat" e o reinicia se ele sumir. Assim, os
+    dois se vigiam — derrubar um faz o outro ressuscitá-lo.
+
+    Observação: a resiliência primária é a própria recuperação automática do
+    Gerenciador de Serviços do Windows (sc failure), configurada na instalação;
+    o watchdog é a camada adicional.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>ControleTempo.Watchdog</RootNamespace>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="8.0.1" />
+    <PackageReference Include="System.ServiceProcess.ServiceController" Version="8.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ControleTempo.Core\ControleTempo.Core.csproj" />
+  </ItemGroup>
+
+</Project>

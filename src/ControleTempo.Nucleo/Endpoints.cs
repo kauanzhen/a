@@ -296,11 +296,11 @@ public static class Endpoints
     private static void MapearOverlay(WebApplication app)
     {
         app.MapGet("/api/overlay/pacote", (ContextoControle ctx, HttpContext http) =>
-            !EhLoopback(http) ? Results.Forbid() : Results.Ok(ctx.MontarPacote()));
+            !EhLoopback(http) ? Results.StatusCode(403) : Results.Ok(ctx.MontarPacote()));
 
         app.MapPost("/api/overlay/batimento", (ContextoControle ctx, HttpContext http, BatimentoOverlay b) =>
         {
-            if (!EhLoopback(http)) return Results.Forbid();
+            if (!EhLoopback(http)) return Results.StatusCode(403);
             ctx.RegistrarBatimento(b.SegundosInativo);
             // Reautenticação pela tela de bloqueio.
             if (!string.IsNullOrEmpty(b.SenhaReautenticacao))
@@ -314,7 +314,7 @@ public static class Endpoints
 
         app.MapPost("/api/overlay/login", (ContextoControle ctx, HttpContext http, LoginCriancaDto dto) =>
         {
-            if (!EhLoopback(http)) return Results.Forbid();
+            if (!EhLoopback(http)) return Results.StatusCode(403);
             var (ok, msg) = ctx.Motor.IniciarSessao(dto.Nome, dto.Senha);
             if (ok) ctx.DefinirComando(ComandoOverlay.LiberarTela);
             return Results.Ok(new { ok, msg });
@@ -322,7 +322,7 @@ public static class Endpoints
 
         app.MapPost("/api/overlay/pedir-tempo", (ContextoControle ctx, HttpContext http, PedirTempoDto dto) =>
         {
-            if (!EhLoopback(http)) return Results.Forbid();
+            if (!EhLoopback(http)) return Results.StatusCode(403);
             int? uid = ctx.Motor.UsuarioLogadoId;
             if (uid is null) return Results.BadRequest(new { erro = "Ninguém logado." });
             var u = ctx.Repo.ObterUsuario(uid.Value);
@@ -342,7 +342,7 @@ public static class Endpoints
         // Lista de nomes para a tela de login do overlay (sem expor senhas).
         app.MapGet("/api/overlay/usuarios", (ContextoControle ctx, HttpContext http) =>
         {
-            if (!EhLoopback(http)) return Results.Forbid();
+            if (!EhLoopback(http)) return Results.StatusCode(403);
             var nomes = ctx.Repo.ListarUsuarios(somenteCriancas: true)
                 .Where(u => u.Ativo).Select(u => u.Nome);
             return Results.Ok(nomes);

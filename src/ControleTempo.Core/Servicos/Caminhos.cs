@@ -26,6 +26,9 @@ public static class Caminhos
     public static string PastaBackup => Path.Combine(PastaDados, "backups");
     public static string PastaLogs => Path.Combine(PastaDados, "logs");
 
+    /// <summary>Quando este arquivo existe, o controle fica dormente (liberado).</summary>
+    public static string ArquivoDesativado => Path.Combine(PastaDados, "desativado.flag");
+
     /// <summary>Nome do named pipe de IPC entre serviço e overlay/recovery.</summary>
     public const string PipeIpc = "ControleTempo.Ipc";
 

@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    ControleTempo.Recovery
+    ======================
+    Saída de emergência LOCAL e ferramenta de recuperação, protegida pela senha
+    mestra. Funciona offline e mesmo com o serviço travado. É aberta pelo atalho
+    secreto (configurado no painel) ou executada manualmente como administrador.
+    Permite: parar/liberar o PC agora, dar tempo a um usuário direto no banco,
+    desativar/reativar o sistema temporariamente, restaurar backup e redefinir a
+    senha do admin — tudo sem reinstalar o Windows e sem jamais "brickar" o PC.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>ControleTempo.Recovery</RootNamespace>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>ControleTempo.Recovery</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.ServiceProcess.ServiceController" Version="8.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ControleTempo.Core\ControleTempo.Core.csproj" />
+  </ItemGroup>
+
+</Project>

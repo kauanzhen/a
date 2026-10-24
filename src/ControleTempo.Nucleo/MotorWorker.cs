@@ -1,3 +1,5 @@
+using System.Runtime.Versioning;
+using System.ServiceProcess;
 using ControleTempo.Core.Contratos;
 using ControleTempo.Core.Modelos;
 using ControleTempo.Core.Servicos;
@@ -41,6 +43,7 @@ public sealed class MotorWorker : BackgroundService
             {
                 Passo();
                 FazerBackupSeNecessario();
+                VigiarWatchdog();
             }
             catch (Exception ex)
             {
@@ -54,6 +57,10 @@ public sealed class MotorWorker : BackgroundService
 
     private void Passo()
     {
+        // Em modo de emergência (desativado), o controle fica dormente: não conta
+        // nem bloqueia, deixando o PC totalmente liberado até ser reativado.
+        if (_ctx.SistemaDesativado()) return;
+
         bool ativo = _ctx.HouveAtividade();
         ResultadoTick res = _ctx.Motor.Tique(ativo);
 
@@ -87,6 +94,46 @@ public sealed class MotorWorker : BackgroundService
                 _ctx.DefinirAviso("Seu tempo acabou. Peça mais tempo ao responsável.");
                 break;
         }
+    }
+
+    private DateTime _ultimaChecagemWatchdog = DateTime.MinValue;
+
+    /// <summary>
+    /// Vigilância recíproca: se o heartbeat do watchdog estiver velho (> 30s), tenta
+    /// reiniciá-lo. Junto com o watchdog (que reinicia este serviço), forma a dupla
+    /// que se vigia.
+    /// </summary>
+    private void VigiarWatchdog()
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        if ((_ctx.Relogio.AgoraUtc - _ultimaChecagemWatchdog).TotalSeconds < 15) return;
+        _ultimaChecagemWatchdog = _ctx.Relogio.AgoraUtc;
+
+        try
+        {
+            string arquivo = Path.Combine(Caminhos.PastaDados, "watchdog.alive");
+            bool vivo = File.Exists(arquivo)
+                && (DateTime.UtcNow - File.GetLastWriteTimeUtc(arquivo)).TotalSeconds < 30;
+            if (!vivo) ReiniciarWatchdog();
+        }
+        catch (Exception ex) { _log.LogWarning(ex, "Falha ao vigiar o watchdog."); }
+    }
+
+    [SupportedOSPlatform("windows")]
+    private void ReiniciarWatchdog()
+    {
+        try
+        {
+            using var sc = new ServiceController("ControleTempoWatchdog");
+            sc.Refresh();
+            if (sc.Status == ServiceControllerStatus.Stopped)
+            {
+                _log.LogWarning("Watchdog parado — reiniciando.");
+                sc.Start();
+                _ctx.Repo.Registrar(TipoEvento.WatchdogReiniciou, 0, "Watchdog reiniciado pelo núcleo.");
+            }
+        }
+        catch (InvalidOperationException) { /* watchdog não instalado ainda */ }
     }
 
     private void FazerBackupSeNecessario()
