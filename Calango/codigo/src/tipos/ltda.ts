@@ -19,7 +19,6 @@ export const LTDA: DefinicaoTipoSocietario = {
   },
   bloco_qualificacao_pessoa_fisica: 'qualificacao-pessoa-fisica',
   documentos: ['abertura', 'alteracao', 'distrato'],
-  usa: { quotas: true, administracao: true, pro_labore: true },
 };
 
 export const DOC_ABERTURA: DefinicaoDocumento = {

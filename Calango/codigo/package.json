@@ -9,7 +9,8 @@
     "build": "tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:navegador": "npm run build && node testes-navegador/fluxo-abertura.cjs"
   },
   "dependencies": {
     "docx": "^9.5.1",

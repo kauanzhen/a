@@ -1,28 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { bibliotecaInicial } from './inicial';
 import { camposDaClausula } from '../motor/campos';
-import { montarDocumento, textoDoDocumento, type DocumentoMontado } from '../motor/montagem';
+import { textoDoDocumento } from '../motor/montagem';
+import { BIBLIOTECA_TESTE, buscarNaBiblioteca, gerarAbertura } from '../test/abertura';
 import { DOC_ABERTURA, LTDA } from '../tipos/ltda';
 import { exemplo } from '../dados/exemplos';
-import { opcoesAtoPadrao } from '../dados/fabricas';
-import type { DadosEmpresa } from '../dados/tipos';
 import { ordinalClausula } from '../gramatica/ordinais';
 
-const biblioteca = bibliotecaInicial('2026-11-03T00:00:00.000Z');
-const buscar = (id: string) => biblioteca.find((c) => c.id === id);
-
-export function gerarAbertura(dados: DadosEmpresa): DocumentoMontado {
-  const selecao: Record<string, { clausula_id: string; versao: number; ativa: boolean }[]> = {};
-  for (const [area, ids] of Object.entries(DOC_ABERTURA.padrao)) {
-    selecao[area] = ids.map((id) => ({ clausula_id: id, versao: 1, ativa: true }));
-  }
-  return montarDocumento({
-    definicao: DOC_ABERTURA,
-    selecao,
-    contexto: { dados, tipo: LTDA, opcoes: { ...opcoesAtoPadrao('Barueri', 'SP'), data_ato: '2026-11-03' } },
-    buscarClausula: buscar,
-  });
-}
+const biblioteca = BIBLIOTECA_TESTE;
+const buscar = buscarNaBiblioteca;
 
 /** Formas proibidas no documento final (seção 7.1 e 13 da especificação). */
 const PROIBIDOS = [

@@ -1,0 +1,308 @@
+{
+  "formato": "calango/exportacao",
+  "versao_formato": 1,
+  "exportado_em": "2026-11-03T05:43:30.861Z",
+  "conteudo": "empresa",
+  "empresas": [
+    {
+      "formato": "calango/empresa",
+      "versao_formato": 1,
+      "id": "a4256d96-470b-4dfe-9c03-8300a6e63f07",
+      "tipo_societario": "ltda",
+      "criada_em": "2026-11-03T05:40:26.294Z",
+      "atualizada_em": "2026-11-03T05:40:26.294Z",
+      "vigente": null,
+      "atos": [
+        {
+          "id": "644b717d-7fc6-41f8-9ac5-1f7b78d5f493",
+          "tipo_documento": "abertura",
+          "status": "rascunho",
+          "criado_em": "2026-11-03T05:40:26.297Z",
+          "atualizado_em": "2026-11-03T05:40:26.297Z",
+          "gerado_em": "",
+          "dados_antes": null,
+          "dados_depois": {
+            "razao_social": "EXEMPLO COMÉRCIO E SERVIÇOS LTDA",
+            "cnpj": "",
+            "nire": "",
+            "data_registro": "",
+            "junta_uf": "SP",
+            "numero_ultima_alteracao": 0,
+            "sede": {
+              "logradouro": "Rua Campos Sales",
+              "numero": "300",
+              "complemento": "sala 5",
+              "bairro": "Centro",
+              "cidade": "Barueri",
+              "uf": "SP",
+              "cep": "06401-000"
+            },
+            "data_inicio_atividades": "2026-12-01",
+            "prazo": {
+              "tipo": "indeterminado",
+              "data": ""
+            },
+            "objeto_social": {
+              "forma": "texto",
+              "texto": "comércio varejista de artigos de papelaria e prestação de serviços de cópias e impressão",
+              "itens": []
+            },
+            "cnaes": [
+              {
+                "codigo": "47.61-0-03",
+                "descricao": "Comércio varejista de artigos de papelaria",
+                "tipo": "principal"
+              },
+              {
+                "codigo": "82.19-9-01",
+                "descricao": "Fotocópias",
+                "tipo": "secundario"
+              }
+            ],
+            "enquadramento": "ME",
+            "capital": {
+              "valor_centavos": 1050000,
+              "valor_quota_centavos": 100,
+              "integralizacao": "a_vista",
+              "integralizacao_data": "",
+              "bens_descricao": ""
+            },
+            "quotas": {
+              "modo": "unica",
+              "classes": []
+            },
+            "pessoas": [
+              {
+                "id": "ex-joao",
+                "tipo_pessoa": "fisica",
+                "nome": "JOÃO DA SILVA PEREIRA",
+                "genero": "M",
+                "nacionalidade": "brasileiro",
+                "maioridade": "maior",
+                "naturalidade_cidade": "São Paulo",
+                "naturalidade_uf": "SP",
+                "data_nascimento": "1980-02-15",
+                "estado_civil": "casado",
+                "regime_bens": "comunhao_parcial",
+                "profissao": "empresário",
+                "registro_conselho": "",
+                "rg": "12.345.678-9",
+                "rg_orgao": "SSP",
+                "rg_uf": "SP",
+                "cpf": "529.982.247-25",
+                "endereco": {
+                  "logradouro": "Rua das Palmeiras",
+                  "numero": "120",
+                  "complemento": "apto 32",
+                  "bairro": "Centro",
+                  "cidade": "Barueri",
+                  "uf": "SP",
+                  "cep": "06401-000"
+                },
+                "representante": null,
+                "estrangeiro": null,
+                "juridica": null
+              },
+              {
+                "id": "ex-maria",
+                "tipo_pessoa": "fisica",
+                "nome": "MARIA APARECIDA SOUZA",
+                "genero": "F",
+                "nacionalidade": "brasileira",
+                "maioridade": "maior",
+                "naturalidade_cidade": "Osasco",
+                "naturalidade_uf": "SP",
+                "data_nascimento": "1985-07-01",
+                "estado_civil": "solteiro",
+                "regime_bens": "",
+                "profissao": "administradora",
+                "registro_conselho": "CRA-SP 123456",
+                "rg": "23.456.789-0",
+                "rg_orgao": "SSP",
+                "rg_uf": "SP",
+                "cpf": "111.444.777-35",
+                "endereco": {
+                  "logradouro": "Avenida Brasil",
+                  "numero": "2000",
+                  "complemento": "",
+                  "bairro": "Jardim América",
+                  "cidade": "Osasco",
+                  "uf": "SP",
+                  "cep": "06010-000"
+                },
+                "representante": null,
+                "estrangeiro": null,
+                "juridica": null
+              }
+            ],
+            "participacoes": [
+              {
+                "pessoa_id": "ex-joao",
+                "quotas": {
+                  "ordinarias": 5250
+                }
+              },
+              {
+                "pessoa_id": "ex-maria",
+                "quotas": {
+                  "ordinarias": 5250
+                }
+              }
+            ],
+            "administracao": {
+              "administradores": [
+                "ex-joao",
+                "ex-maria"
+              ],
+              "forma": "isolada"
+            },
+            "pro_labore": [
+              "ex-joao",
+              "ex-maria"
+            ],
+            "foro": {
+              "cidade": "Barueri",
+              "uf": "SP"
+            },
+            "exercicio": {
+              "inicio": "01-01",
+              "fim": "12-31"
+            }
+          },
+          "selecao": {
+            "titulo": [
+              {
+                "clausula_id": "titulo-abertura",
+                "versao": 1,
+                "ativa": true
+              }
+            ],
+            "preambulo": [
+              {
+                "clausula_id": "preambulo-abertura",
+                "versao": 1,
+                "ativa": true
+              }
+            ],
+            "corpo": [
+              {
+                "clausula_id": "denominacao",
+                "versao": 1,
+                "ativa": true
+              },
+              {
+                "clausula_id": "sede",
+                "versao": 1,
+                "ativa": true
+              },
+              {
+                "clausula_id": "duracao",
+                "versao": 1,
+                "ativa": true
+              },
+              {
+                "clausula_id": "objeto-social",
+                "versao": 1,
+                "ativa": true
+              },
+              {
+                "clausula_id": "capital-social",
+                "versao": 1,
+                "ativa": true
+              },
+              {
+                "clausula_id": "paragrafo-responsabilidade-quotas",
+                "versao": 1,
+                "ativa": true
+              },
+              {
+                "clausula_id": "paragrafo-quotas-indivisiveis",
+                "versao": 1,
+                "ativa": true
+              },
+              {
+                "clausula_id": "paragrafo-aumento-capital",
+                "versao": 1,
+                "ativa": true
+              },
+              {
+                "clausula_id": "enquadramento",
+                "versao": 1,
+                "ativa": true
+              },
+              {
+                "clausula_id": "administracao",
+                "versao": 1,
+                "ativa": true
+              },
+              {
+                "clausula_id": "paragrafo-administrador-nao-socio",
+                "versao": 1,
+                "ativa": true
+              },
+              {
+                "clausula_id": "pro-labore",
+                "versao": 1,
+                "ativa": true
+              },
+              {
+                "clausula_id": "exercicio-social",
+                "versao": 1,
+                "ativa": true
+              },
+              {
+                "clausula_id": "paragrafo-balancos-intermediarios",
+                "versao": 1,
+                "ativa": true
+              },
+              {
+                "clausula_id": "desimpedimento",
+                "versao": 1,
+                "ativa": true
+              },
+              {
+                "clausula_id": "filiais",
+                "versao": 1,
+                "ativa": true
+              },
+              {
+                "clausula_id": "falecimento",
+                "versao": 1,
+                "ativa": true
+              },
+              {
+                "clausula_id": "foro",
+                "versao": 1,
+                "ativa": true
+              }
+            ],
+            "fechamento": [
+              {
+                "clausula_id": "fechamento-abertura",
+                "versao": 1,
+                "ativa": true
+              }
+            ],
+            "assinaturas": [
+              {
+                "clausula_id": "assinaturas-socios",
+                "versao": 1,
+                "ativa": true
+              }
+            ],
+            "anexo": []
+          },
+          "opcoes": {
+            "data_ato": "2026-11-03",
+            "local_cidade": "Barueri",
+            "local_uf": "SP",
+            "situacao_escolhida": "pluripessoal",
+            "usar_cabecalho": true
+          },
+          "registro": null,
+          "arquivo_gerado": ""
+        }
+      ]
+    }
+  ]
+}

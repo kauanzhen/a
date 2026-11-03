@@ -22,8 +22,6 @@ export interface DefinicaoTipoSocietario {
   bloco_qualificacao_pessoa_fisica: string;
   /** Documentos que este tipo aceita (ids de DefinicaoDocumento). */
   documentos: string[];
-  /** Funcionalidades de dados que o tipo usa (o formulário só mostra o que o tipo usa). */
-  usa: { quotas: boolean; administracao: boolean; pro_labore: boolean };
 }
 
 export type EstiloParagrafo =

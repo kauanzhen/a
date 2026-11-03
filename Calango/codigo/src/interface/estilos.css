@@ -1,0 +1,193 @@
+/* Calango — interface simples, fonte legível e botões grandes. */
+:root {
+  --fundo: #f4f5f2;
+  --painel: #ffffff;
+  --texto: #1f2421;
+  --texto-suave: #5b635e;
+  --borda: #d5d9d3;
+  --primaria: #2f6b3a;
+  --primaria-escura: #23522c;
+  --primaria-clara: #e6f0e7;
+  --perigo: #b3261e;
+  --perigo-claro: #fbe9e7;
+  --aviso: #8a5a00;
+  --aviso-claro: #fff4d6;
+  --info-claro: #e8f0fb;
+  --raio: 8px;
+  --sombra: 0 1px 3px rgba(0, 0, 0, 0.08);
+  font-family: 'Segoe UI', system-ui, -apple-system, Arial, sans-serif;
+  font-size: 16px;
+  color: var(--texto);
+  background: var(--fundo);
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--fundo); }
+h1 { font-size: 1.6rem; margin: 0 0 0.75rem; }
+h2 { font-size: 1.3rem; margin: 1.25rem 0 0.6rem; }
+h3 { font-size: 1.1rem; margin: 1rem 0 0.5rem; }
+p { line-height: 1.5; }
+a { color: var(--primaria); }
+code, .mono { font-family: Consolas, 'Courier New', monospace; font-size: 0.92em; }
+
+/* ---------- Estrutura ---------- */
+.app { display: flex; min-height: 100vh; }
+.menu {
+  width: 240px; flex-shrink: 0; background: #1f3d25; color: #fff; padding: 1rem 0.75rem;
+  display: flex; flex-direction: column; gap: 0.25rem;
+}
+.menu .marca { font-size: 1.5rem; font-weight: 700; padding: 0.25rem 0.5rem 0.75rem; }
+.menu .marca small { display: block; font-size: 0.75rem; font-weight: 400; opacity: 0.8; }
+.menu button {
+  background: transparent; color: #fff; border: 0; text-align: left; padding: 0.7rem 0.75rem;
+  border-radius: var(--raio); font-size: 1rem; cursor: pointer;
+}
+.menu button:hover { background: rgba(255, 255, 255, 0.1); }
+.menu button.ativo { background: rgba(255, 255, 255, 0.18); font-weight: 600; }
+.menu .rodape-menu { margin-top: auto; font-size: 0.8rem; opacity: 0.85; padding: 0.5rem; word-break: break-word; }
+.conteudo { flex: 1; padding: 1.5rem 2rem 4rem; max-width: 1300px; min-width: 0; }
+
+.painel { background: var(--painel); border: 1px solid var(--borda); border-radius: var(--raio); padding: 1.1rem 1.25rem; box-shadow: var(--sombra); margin-bottom: 1rem; }
+.painel h2:first-child, .painel h3:first-child { margin-top: 0; }
+
+.grade { display: grid; gap: 0.75rem 1rem; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+.grade-2 { display: grid; gap: 1rem; grid-template-columns: 1fr 1fr; }
+@media (max-width: 1000px) { .grade-2 { grid-template-columns: 1fr; } .menu { width: 190px; } }
+.linha { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+.linha.fim { justify-content: flex-end; }
+.entre { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.espaco { flex: 1; }
+.suave { color: var(--texto-suave); }
+.pequeno { font-size: 0.88rem; }
+.centro { text-align: center; }
+
+/* ---------- Botões ---------- */
+button, .botao {
+  font: inherit; font-size: 1rem; padding: 0.6rem 1.1rem; border-radius: var(--raio);
+  border: 1px solid var(--borda); background: #fff; color: var(--texto); cursor: pointer; min-height: 42px;
+}
+button:hover:not(:disabled) { border-color: #9aa59c; background: #fafbf9; }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+button.primario { background: var(--primaria); border-color: var(--primaria); color: #fff; font-weight: 600; }
+button.primario:hover:not(:disabled) { background: var(--primaria-escura); }
+button.perigo { color: var(--perigo); border-color: #e3b4b0; }
+button.perigo:hover:not(:disabled) { background: var(--perigo-claro); }
+button.grande { font-size: 1.1rem; padding: 0.9rem 1.5rem; min-height: 52px; }
+button.pequeno { font-size: 0.88rem; padding: 0.3rem 0.65rem; min-height: 32px; }
+button.link { border: 0; background: none; color: var(--primaria); padding: 0.2rem 0.3rem; min-height: 0; text-decoration: underline; }
+
+/* ---------- Formulários ---------- */
+label.campo { display: flex; flex-direction: column; gap: 0.3rem; font-weight: 600; font-size: 0.95rem; }
+label.campo .dica { font-weight: 400; color: var(--texto-suave); font-size: 0.85rem; }
+input[type='text'], input[type='date'], input[type='number'], input[type='search'], select, textarea {
+  font: inherit; font-size: 1rem; padding: 0.55rem 0.65rem; border: 1px solid #b9c0ba; border-radius: 6px;
+  background: #fff; color: var(--texto); width: 100%; min-height: 42px;
+}
+textarea { min-height: 90px; resize: vertical; line-height: 1.45; }
+input:focus, select:focus, textarea:focus { outline: 2px solid #7fb48a; border-color: var(--primaria); }
+input.invalido, select.invalido, textarea.invalido { border-color: var(--perigo); background: #fffafa; }
+.erro-campo { color: var(--perigo); font-size: 0.85rem; font-weight: 400; }
+label.opcao { display: inline-flex; align-items: center; gap: 0.45rem; font-weight: 400; cursor: pointer; padding: 0.25rem 0; }
+label.opcao input { width: 18px; height: 18px; }
+.radios { display: flex; gap: 1rem; flex-wrap: wrap; }
+.cartoes-opcao { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+.cartoes-opcao label {
+  border: 2px solid var(--borda); border-radius: var(--raio); padding: 0.8rem 1rem; cursor: pointer; background: #fff; flex: 1; min-width: 220px;
+}
+.cartoes-opcao label.marcado { border-color: var(--primaria); background: var(--primaria-clara); }
+.cartoes-opcao input { margin-right: 0.4rem; }
+fieldset { border: 1px solid var(--borda); border-radius: var(--raio); padding: 0.8rem 1rem 1rem; margin: 0 0 1rem; }
+legend { font-weight: 700; padding: 0 0.4rem; }
+
+/* ---------- Mensagens ---------- */
+.alerta { border-radius: var(--raio); padding: 0.75rem 1rem; margin: 0.5rem 0 1rem; border: 1px solid; line-height: 1.45; }
+.alerta.erro { background: var(--perigo-claro); border-color: #efb9b4; color: #7a1a14; }
+.alerta.aviso { background: var(--aviso-claro); border-color: #f0d48a; color: #5f3e00; }
+.alerta.info { background: var(--info-claro); border-color: #bcd0ef; color: #1d3d6e; }
+.alerta.ok { background: var(--primaria-clara); border-color: #b8d5bd; color: #1d4a26; }
+.alerta ul { margin: 0.35rem 0 0; padding-left: 1.2rem; }
+.alerta li { margin: 0.2rem 0; }
+.avisos-flutuantes { position: fixed; right: 1rem; bottom: 1rem; display: flex; flex-direction: column; gap: 0.5rem; z-index: 100; max-width: 460px; }
+.avisos-flutuantes .alerta { margin: 0; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15); display: flex; gap: 0.75rem; align-items: flex-start; }
+.avisos-flutuantes .alerta button { min-height: 0; padding: 0.1rem 0.5rem; }
+
+.etiqueta { display: inline-block; font-size: 0.78rem; padding: 0.1rem 0.5rem; border-radius: 999px; background: #eceee9; color: #3d443f; margin: 0.1rem 0.15rem 0.1rem 0; white-space: nowrap; }
+.etiqueta.verde { background: var(--primaria-clara); color: var(--primaria-escura); }
+.etiqueta.amarela { background: var(--aviso-claro); color: var(--aviso); }
+.etiqueta.vermelha { background: var(--perigo-claro); color: var(--perigo); }
+.etiqueta.azul { background: var(--info-claro); color: #1d3d6e; }
+
+/* ---------- Tabelas ---------- */
+table.lista { width: 100%; border-collapse: collapse; background: #fff; }
+table.lista th, table.lista td { text-align: left; padding: 0.55rem 0.6rem; border-bottom: 1px solid var(--borda); vertical-align: top; }
+table.lista th { background: #f0f2ee; font-size: 0.9rem; }
+table.lista tr:hover td { background: #fafbf9; }
+table.lista td.num, table.lista th.num { text-align: right; }
+
+/* ---------- Etapas ---------- */
+.etapas { display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
+.etapas button { flex: 1; min-width: 180px; text-align: left; }
+.etapas button.ativa { border-color: var(--primaria); background: var(--primaria-clara); font-weight: 700; }
+.barra-acoes { position: sticky; bottom: 0; background: rgba(244, 245, 242, 0.96); padding: 0.75rem 0; border-top: 1px solid var(--borda); margin-top: 1rem; z-index: 5; }
+
+/* ---------- Lista de cláusulas (Etapa 1) ---------- */
+.area-clausulas { margin-bottom: 1.25rem; }
+.item-clausula {
+  display: flex; gap: 0.6rem; align-items: center; padding: 0.55rem 0.7rem; border: 1px solid var(--borda);
+  border-radius: var(--raio); background: #fff; margin-bottom: 0.35rem;
+}
+.item-clausula.paragrafo { margin-left: 2rem; background: #fbfcfa; }
+.item-clausula.desligada { opacity: 0.55; }
+.item-clausula.arrastando { outline: 2px dashed var(--primaria); }
+.item-clausula .alca { cursor: grab; color: #8b948d; font-size: 1.2rem; user-select: none; padding: 0 0.2rem; }
+.item-clausula .titulo { flex: 1; min-width: 0; }
+.item-clausula .titulo small { display: block; color: var(--texto-suave); }
+.texto-clausula { white-space: pre-wrap; font-family: Consolas, monospace; font-size: 0.85rem; background: #f7f8f6; border: 1px solid var(--borda); border-radius: 6px; padding: 0.6rem; margin: 0.25rem 0 0.6rem 2rem; max-height: 260px; overflow: auto; }
+
+/* ---------- Pessoa / sócios ---------- */
+.cartao-pessoa { border: 1px solid var(--borda); border-radius: var(--raio); margin-bottom: 0.75rem; background: #fff; }
+.cartao-pessoa > .cabeca { display: flex; align-items: center; gap: 0.75rem; padding: 0.7rem 1rem; cursor: pointer; background: #f7f8f6; border-radius: var(--raio) var(--raio) 0 0; }
+.cartao-pessoa > .corpo { padding: 1rem; }
+
+/* ---------- Editor de cláusulas ---------- */
+.editor { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 1rem; align-items: start; }
+@media (max-width: 1100px) { .editor { grid-template-columns: 1fr; } }
+.barra-ferramentas { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.4rem; }
+.barra-ferramentas button { font-size: 0.88rem; padding: 0.35rem 0.6rem; min-height: 34px; }
+textarea.corpo-clausula { font-family: Consolas, 'Courier New', monospace; font-size: 0.92rem; min-height: 340px; line-height: 1.5; white-space: pre-wrap; }
+.lista-escolha { max-height: 420px; overflow: auto; border: 1px solid var(--borda); border-radius: 6px; }
+.lista-escolha button { display: block; width: 100%; text-align: left; border: 0; border-bottom: 1px solid #eceee9; border-radius: 0; min-height: 0; padding: 0.5rem 0.7rem; }
+.lista-escolha button:hover { background: var(--primaria-clara); }
+.lista-escolha .grupo { background: #f0f2ee; font-weight: 700; padding: 0.35rem 0.7rem; font-size: 0.85rem; position: sticky; top: 0; }
+
+/* ---------- Modal ---------- */
+.fundo-modal { position: fixed; inset: 0; background: rgba(20, 30, 22, 0.45); display: flex; align-items: flex-start; justify-content: center; padding: 4vh 1rem; z-index: 50; overflow: auto; }
+.modal { background: #fff; border-radius: 10px; padding: 1.25rem 1.5rem; width: min(760px, 100%); box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25); }
+.modal.largo { width: min(1000px, 100%); }
+.modal h2 { margin-top: 0; }
+
+/* ---------- Pré-visualização do documento ---------- */
+.folha {
+  background: #fff; border: 1px solid #c9cec8; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  padding: 2.2cm 2.4cm; max-width: 21cm; margin: 0 auto; color: #000; line-height: 1.35;
+}
+.folha p { margin: 0 0 0.55em; text-align: justify; }
+.folha .e-titulo { text-align: center; font-weight: 700; font-size: 1.08em; }
+.folha .e-titulo_secao { font-weight: 700; margin-top: 1em; text-align: left; }
+.folha .e-alinea { margin-left: 0.75cm; }
+.folha .e-item { margin-left: 1cm; text-indent: -0.4cm; }
+.folha .e-assinatura { text-align: center; margin: 0; }
+.folha .e-linha-assinatura { text-align: center; margin: 2.2em 0 0; }
+.folha table { border-collapse: collapse; width: 100%; margin: 0.4em 0 0.9em; font-size: 0.92em; }
+.folha th, .folha td { border: 1px solid #808080; padding: 0.2em 0.4em; text-align: left; }
+.folha th { background: #e7e6e6; }
+.folha td.num { text-align: right; }
+.folha .pendente, .pendente { background: #ffe55c; padding: 0 0.15em; }
+.cabecalho-folha { text-align: center; color: #555; border-bottom: 1px dashed #ccc; margin-bottom: 1em; padding-bottom: 0.5em; font-size: 0.85em; }
+.cabecalho-folha img { max-width: 100%; max-height: 3cm; }
+.rodape-folha { text-align: center; color: #555; border-top: 1px dashed #ccc; margin-top: 1.5em; padding-top: 0.5em; font-size: 0.8em; }
+.lembrete { text-align: center; font-weight: 600; color: var(--aviso); margin: 1rem 0; }
+
+.tela-centro { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 2rem; }
+.tela-centro .painel { max-width: 640px; width: 100%; padding: 2rem; }
+.vazio { padding: 2rem; text-align: center; color: var(--texto-suave); }
