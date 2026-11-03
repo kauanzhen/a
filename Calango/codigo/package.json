@@ -1,0 +1,30 @@
+{
+  "name": "calango",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Calango — gerador de atos societários (LTDA) que roda no navegador, sem servidor.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "docx": "^9.5.1",
+    "react": "19.1",
+    "react-dom": "19.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "@types/react": "19.1",
+    "@types/react-dom": "19.1",
+    "@vitejs/plugin-react": "^5.2.0",
+    "jszip": "^3.10.1",
+    "typescript": "5.9",
+    "vite": "^7.3.7",
+    "vite-plugin-singlefile": "^2.3.4",
+    "vitest": "^5.1.0"
+  }
+}
