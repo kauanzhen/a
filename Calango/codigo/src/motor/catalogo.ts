@@ -28,7 +28,8 @@ import {
   valorDoSocio,
   valorQuotaDaClasse,
 } from '../dados/quotas';
-import type { ClasseQuota, Cnae, DadosEmpresa, OpcoesAto, Participacao, Pessoa } from '../dados/tipos';
+import type { ClasseQuota, Cnae, DadosDistrato, DadosEmpresa, MovimentoQuotas, OpcoesAto, Participacao, Pessoa } from '../dados/tipos';
+import { ingressantes, mudouAdministracao, mudouCnaes, mudouObjeto, mudouSede, pessoasDoAto, retirantes } from '../dados/movimentos';
 import { nomeJunta } from '../dados/ufs';
 import type { DefinicaoTipoSocietario } from '../tipos/definicoes';
 import type { ConteudoClausula } from './clausula';
@@ -50,6 +51,16 @@ export interface ContextoAvaliacao {
   /** Preenchido pelo avaliador: monta um bloco da biblioteca como texto corrido. */
   renderizarBloco?: (id: string, escopo: Escopo) => Trecho[];
   profundidade: number;
+  /** Dados ANTES do ato (alteração, distrato, transformação): usados por "anterior." e pelas condições "mudou_...". */
+  dadosAntes?: DadosEmpresa | null;
+  /** Alteração: aumentos, reduções e cessões de quotas. */
+  movimentos?: MovimentoQuotas[];
+  /** Distrato: dados do encerramento. */
+  distrato?: DadosDistrato | null;
+  /** Textos livres do ato (ex.: motivo da redução de capital). */
+  extras?: Record<string, string>;
+  /** Modo da área que está sendo montada (ex.: "consolidacao"). */
+  modoArea?: string;
 }
 
 export interface ItemEscopo {
@@ -57,6 +68,8 @@ export interface ItemEscopo {
   valor: unknown;
   indice: number;
   total: number;
+  /** Dados de onde o item veio (ex.: sócio que sai vem dos dados anteriores). */
+  dados?: DadosEmpresa;
 }
 export type Escopo = Record<string, ItemEscopo>;
 
@@ -78,6 +91,21 @@ export interface DefTipoItem {
   pai?: string;
   paraPai?: (v: unknown) => unknown;
   referente?: (v: unknown) => Referente;
+  /** Pessoas dentro do item, para concordância (ex.: {o sócio|a sócia : cessao.cessionario}). */
+  pessoas?: Record<string, (v: unknown) => Pessoa | undefined>;
+}
+
+export interface ItemCessao {
+  movimento: Extract<MovimentoQuotas, { tipo: 'cessao' }>;
+  cedente: Pessoa;
+  cessionario: Pessoa;
+  cessionarioIngressa: boolean;
+  cedenteSeRetira: boolean;
+}
+export interface ItemSubscricao {
+  pessoa: Pessoa;
+  quotas: number;
+  valor: number;
 }
 
 const refPessoa = (p: Pessoa): Referente => ({ genero: p.genero === 'F' ? 'F' : 'M', plural: false });
@@ -101,6 +129,18 @@ export const TIPOS_ITEM: DefTipoItem[] = [
   { nome: 'cnae', rotulo: 'CNAE' },
   { nome: 'classe', rotulo: 'Classe de quotas' },
   { nome: 'item', rotulo: 'Item do objeto social' },
+  {
+    nome: 'cessao',
+    rotulo: 'Cessão de quotas',
+    pessoas: { cedente: (v) => (v as ItemCessao).cedente, cessionario: (v) => (v as ItemCessao).cessionario },
+  },
+  {
+    nome: 'subscricao',
+    rotulo: 'Aumento/redução de quotas de um sócio',
+    pai: 'pessoa',
+    paraPai: (v) => (v as ItemSubscricao).pessoa,
+    referente: (v) => refPessoa((v as ItemSubscricao).pessoa),
+  },
 ];
 
 export function tipoItem(nome: string): DefTipoItem | undefined {
@@ -117,6 +157,8 @@ export interface DefColecao {
   itemSugerido: string;
   campos: string[];
   obter: (ctx: ContextoAvaliacao) => unknown[];
+  /** Os itens vêm dos dados anteriores ao ato (ex.: sócios que saem). */
+  dadosAnteriores?: boolean;
 }
 
 function itensSocios(d: DadosEmpresa): ItemSocio[] {
@@ -147,7 +189,8 @@ export const COLECOES: DefColecao[] = [
     rotulo: 'Administradores que não são sócios',
     tipoItem: 'administrador',
     itemSugerido: 'administrador',
-    campos: ['administracao.administradores', 'socios'],
+    // Só lista quem já foi cadastrado: não obriga a ter administrador.
+    campos: ['socios'],
     obter: (c) => itensAdministradores(c.dados).filter((a) => !a.e_socio),
   },
   {
@@ -176,7 +219,121 @@ export const COLECOES: DefColecao[] = [
     campos: ['empresa.objeto_social'],
     obter: (c) => c.dados.objeto_social.itens.filter((t) => t.trim()).map((texto) => ({ texto })),
   },
+  // ----- Atos sobre empresa existente (alteração, distrato, transformação) -----
+  {
+    nome: 'socios_do_ato',
+    rotulo: 'Pessoas que participam do ato (sócios atuais, inclusive quem sai, e quem entra)',
+    tipoItem: 'pessoa',
+    itemSugerido: 'pessoa',
+    campos: ['socios'],
+    obter: (c) => (c.dadosAntes ? pessoasDoAto(c.dadosAntes, c.dados) : socios(c.dados).map((s) => s.pessoa)),
+  },
+  {
+    nome: 'socios_ingressantes',
+    rotulo: 'Sócios que entram na sociedade',
+    tipoItem: 'socio',
+    itemSugerido: 'socio',
+    campos: ['alteracao.quotas'],
+    obter: (c) => (c.dadosAntes ? itensSocios(c.dados).filter((s) => ingressantes(c.dadosAntes!, c.dados).includes(s.pessoa.id)) : []),
+  },
+  {
+    nome: 'socios_retirantes',
+    rotulo: 'Sócios que saem da sociedade',
+    tipoItem: 'socio',
+    itemSugerido: 'socio',
+    campos: ['alteracao.quotas'],
+    dadosAnteriores: true,
+    obter: (c) => (c.dadosAntes ? itensSocios(c.dadosAntes).filter((s) => retirantes(c.dadosAntes!, c.dados).includes(s.pessoa.id)) : []),
+  },
+  {
+    nome: 'cessoes',
+    rotulo: 'Cessões de quotas',
+    tipoItem: 'cessao',
+    itemSugerido: 'cessao',
+    campos: ['alteracao.quotas'],
+    obter: (c) => itensCessao(c),
+  },
+  { nome: 'aumentos', rotulo: 'Quotas subscritas no aumento de capital', tipoItem: 'subscricao', itemSugerido: 'subscricao', campos: ['alteracao.quotas'], obter: (c) => itensSubscricao(c, 'aumento') },
+  { nome: 'reducoes', rotulo: 'Quotas extintas na redução de capital', tipoItem: 'subscricao', itemSugerido: 'subscricao', campos: ['alteracao.quotas'], obter: (c) => itensSubscricao(c, 'reducao') },
 ];
+
+function pessoaDoAto(c: ContextoAvaliacao, id: string): Pessoa | undefined {
+  return buscarPessoa(c.dados, id) ?? (c.dadosAntes ? buscarPessoa(c.dadosAntes, id) : undefined);
+}
+
+function valorDaQuota(c: ContextoAvaliacao, classeId: string): number {
+  const k = classesEfetivas(c.dados).find((x) => x.id === classeId);
+  return k ? valorQuotaDaClasse(c.dados, k) : c.dados.capital.valor_quota_centavos;
+}
+
+function itensCessao(c: ContextoAvaliacao): ItemCessao[] {
+  if (!c.dadosAntes) return [];
+  const entram = new Set(ingressantes(c.dadosAntes, c.dados));
+  const saem = new Set(retirantes(c.dadosAntes, c.dados));
+  const r: ItemCessao[] = [];
+  for (const m of c.movimentos ?? []) {
+    if (m.tipo !== 'cessao') continue;
+    const cedente = pessoaDoAto(c, m.cedente_id);
+    const cessionario = pessoaDoAto(c, m.cessionario_id);
+    if (cedente && cessionario) r.push({ movimento: m, cedente, cessionario, cessionarioIngressa: entram.has(cessionario.id), cedenteSeRetira: saem.has(cedente.id) });
+  }
+  return r;
+}
+
+/** Aumentos ou reduções somados por pessoa. */
+function itensSubscricao(c: ContextoAvaliacao, tipo: 'aumento' | 'reducao'): ItemSubscricao[] {
+  if (!c.dadosAntes) return [];
+  const porPessoa = new Map<string, ItemSubscricao>();
+  for (const m of c.movimentos ?? []) {
+    if (m.tipo !== tipo) continue;
+    const pessoa = pessoaDoAto(c, m.socio_id);
+    if (!pessoa) continue;
+    const atual = porPessoa.get(pessoa.id) ?? { pessoa, quotas: 0, valor: 0 };
+    atual.quotas += m.quotas;
+    atual.valor += m.quotas * valorDaQuota(c, m.classe_id);
+    porPessoa.set(pessoa.id, atual);
+  }
+  return [...porPessoa.values()];
+}
+
+function somaMovimentos(c: ContextoAvaliacao, tipo: 'aumento' | 'reducao'): { quotas: number; valor: number } {
+  return itensSubscricao(c, tipo).reduce((s, i) => ({ quotas: s.quotas + i.quotas, valor: s.valor + i.valor }), { quotas: 0, valor: 0 });
+}
+
+function temMovimento(c: ContextoAvaliacao, tipo: MovimentoQuotas['tipo']): boolean {
+  return !!c.dadosAntes && (c.movimentos ?? []).some((m) => m.tipo === tipo);
+}
+
+// ---------------- Pessoas nomeadas (sempre disponíveis, sem repetição) ----------------
+
+export interface DefItemFixo {
+  nome: string;
+  rotulo: string;
+  tipoItem: string;
+  campos: string[];
+  obter: (ctx: ContextoAvaliacao) => unknown | undefined;
+}
+
+export const ITENS_FIXOS: DefItemFixo[] = [
+  {
+    nome: 'responsavel_ativo_passivo',
+    rotulo: 'Responsável pelo ativo e passivo supervenientes (distrato)',
+    tipoItem: 'pessoa',
+    campos: ['distrato.responsaveis'],
+    obter: (c) => (c.distrato?.responsavel_ativo_passivo_id ? pessoaDoAto(c, c.distrato.responsavel_ativo_passivo_id) : undefined),
+  },
+  {
+    nome: 'responsavel_livros',
+    rotulo: 'Responsável pela guarda dos livros (distrato)',
+    tipoItem: 'pessoa',
+    campos: ['distrato.responsaveis'],
+    obter: (c) => (c.distrato?.responsavel_livros_id ? pessoaDoAto(c, c.distrato.responsavel_livros_id) : undefined),
+  },
+];
+
+export function itemFixo(nome: string): DefItemFixo | undefined {
+  return ITENS_FIXOS.find((i) => i.nome === nome);
+}
 
 export function colecao(nome: string): DefColecao | undefined {
   return COLECOES.find((c) => c.nome === nome);
@@ -464,6 +621,85 @@ export const VARIAVEIS: DefVariavel[] = [
 
   // ----- Item do objeto social -----
   { nome: 'item.texto', rotulo: 'Texto do item do objeto social', grupo: 'Objeto social', tipoItem: 'item', campos: ['empresa.objeto_social'], resolver: (_c, it) => (it as { texto: string }).texto.trim().replace(/[.;]\s*$/, '') },
+
+  // ----- Capital sem quotas (empresário individual) -----
+  { nome: 'capital.valor_simples_por_extenso', rotulo: 'Capital (sem quotas) com extenso — empresário individual', grupo: 'Capital e quotas', campos: ['capital.valor'], resolver: (c) => (c.dados.capital.valor_centavos > 0 ? moedaComExtenso(c.dados.capital.valor_centavos) : '') },
+
+  // ----- Alteração: aumento e redução de capital -----
+  {
+    nome: 'aumento.quotas_por_extenso',
+    rotulo: 'Quotas criadas no aumento, com extenso',
+    grupo: 'Alteração',
+    campos: ['alteracao.quotas'],
+    resolver: (c) => {
+      const s = somaMovimentos(c, 'aumento');
+      return s.quotas ? quantidadeComExtenso(s.quotas, c.tipo.participacao) : '';
+    },
+  },
+  { nome: 'aumento.valor_por_extenso', rotulo: 'Valor do aumento de capital, com extenso', grupo: 'Alteração', campos: ['alteracao.quotas'], resolver: (c) => { const s = somaMovimentos(c, 'aumento'); return s.valor ? moedaComExtenso(s.valor) : ''; } },
+  {
+    nome: 'reducao.quotas_por_extenso',
+    rotulo: 'Quotas extintas na redução, com extenso',
+    grupo: 'Alteração',
+    campos: ['alteracao.quotas'],
+    resolver: (c) => {
+      const s = somaMovimentos(c, 'reducao');
+      return s.quotas ? quantidadeComExtenso(s.quotas, c.tipo.participacao) : '';
+    },
+  },
+  { nome: 'reducao.valor_por_extenso', rotulo: 'Valor da redução de capital, com extenso', grupo: 'Alteração', campos: ['alteracao.quotas'], resolver: (c) => { const s = somaMovimentos(c, 'reducao'); return s.valor ? moedaComExtenso(s.valor) : ''; } },
+  { nome: 'extra.motivo_reducao', rotulo: 'Motivo da redução de capital', grupo: 'Alteração', campos: ['alteracao.motivo_reducao'], resolver: (c) => (c.extras?.motivo_reducao ?? '').trim().replace(/[.;]\s*$/, '') },
+  {
+    nome: 'socios_do_ato.nomes',
+    rotulo: 'Nomes de quem participa do ato (A, B e C), em negrito',
+    grupo: 'Alteração',
+    campos: ['socios'],
+    resolver: (c) => nomesEmNegrito((c.dadosAntes ? pessoasDoAto(c.dadosAntes, c.dados) : socios(c.dados).map((s) => s.pessoa)).map((p) => p.nome)),
+  },
+  {
+    nome: 'socios_ingressantes.nomes',
+    rotulo: 'Nomes dos sócios que entram, em negrito',
+    grupo: 'Alteração',
+    campos: ['alteracao.quotas'],
+    resolver: (c) => nomesEmNegrito(c.dadosAntes ? ingressantes(c.dadosAntes, c.dados).map((id) => pessoaDoAto(c, id)?.nome ?? '') : []),
+  },
+  {
+    nome: 'socios_retirantes.nomes',
+    rotulo: 'Nomes dos sócios que saem, em negrito',
+    grupo: 'Alteração',
+    campos: ['alteracao.quotas'],
+    resolver: (c) => nomesEmNegrito(c.dadosAntes ? retirantes(c.dadosAntes, c.dados).map((id) => pessoaDoAto(c, id)?.nome ?? '') : []),
+  },
+  // ----- Cessão de quotas (dentro de [para cada cessao em cessoes]) -----
+  { nome: 'cessao.cedente_nome', rotulo: 'Nome de quem cede (em negrito)', grupo: 'Cessão de quotas', tipoItem: 'cessao', campos: ['alteracao.quotas'], resolver: (_c, it) => negrito((it as ItemCessao).cedente.nome.trim()) },
+  { nome: 'cessao.cessionario_nome', rotulo: 'Nome de quem recebe (em negrito)', grupo: 'Cessão de quotas', tipoItem: 'cessao', campos: ['alteracao.quotas'], resolver: (_c, it) => negrito((it as ItemCessao).cessionario.nome.trim()) },
+  { nome: 'cessao.quotas_por_extenso', rotulo: 'Quotas cedidas, com extenso', grupo: 'Cessão de quotas', tipoItem: 'cessao', campos: ['alteracao.quotas'], resolver: (c, it) => quantidadeComExtenso((it as ItemCessao).movimento.quotas, c.tipo.participacao) },
+  {
+    nome: 'cessao.valor_quotas_por_extenso',
+    rotulo: 'Valor nominal das quotas cedidas, com extenso',
+    grupo: 'Cessão de quotas',
+    tipoItem: 'cessao',
+    campos: ['alteracao.quotas'],
+    resolver: (c, it) => {
+      const m = (it as ItemCessao).movimento;
+      return moedaComExtenso(m.quotas * valorDaQuota(c, m.classe_id));
+    },
+  },
+  {
+    nome: 'cessao.preco_por_extenso',
+    rotulo: 'Preço pago pela cessão, com extenso (opcional)',
+    grupo: 'Cessão de quotas',
+    tipoItem: 'cessao',
+    campos: ['alteracao.quotas'],
+    opcional: true,
+    resolver: (_c, it) => ((it as ItemCessao).movimento.preco_centavos > 0 ? moedaComExtenso((it as ItemCessao).movimento.preco_centavos) : ''),
+  },
+  // ----- Aumento/redução por sócio (dentro de [para cada subscricao em aumentos|reducoes]) -----
+  { nome: 'subscricao.quotas_por_extenso', rotulo: 'Quotas do sócio no aumento/redução, com extenso', grupo: 'Alteração', tipoItem: 'subscricao', campos: ['alteracao.quotas'], resolver: (c, it) => quantidadeComExtenso((it as ItemSubscricao).quotas, c.tipo.participacao) },
+  { nome: 'subscricao.valor_por_extenso', rotulo: 'Valor das quotas do sócio no aumento/redução, com extenso', grupo: 'Alteração', tipoItem: 'subscricao', campos: ['alteracao.quotas'], resolver: (_c, it) => moedaComExtenso((it as ItemSubscricao).valor) },
+  // ----- Distrato -----
+  { nome: 'distrato.data_encerramento', rotulo: 'Data de encerramento das atividades (dd/mm/aaaa)', grupo: 'Distrato', campos: ['distrato.data_encerramento'], resolver: (c) => formatarData(c.distrato?.data_encerramento ?? '') },
+  { nome: 'distrato.partilha_descricao', rotulo: 'Descrição da partilha dos haveres', grupo: 'Distrato', campos: ['distrato.liquidacao'], resolver: (c) => (c.distrato?.partilha_descricao ?? '').trim().replace(/[.;]\s*$/, '') },
 ];
 
 // ---------------- Condições ----------------
@@ -621,6 +857,36 @@ export const CONDICOES: DefCondicao[] = [
   { nome: 'classe.preferencia_lucros', rotulo: 'A classe tem preferência nos lucros', grupo: 'Classe de quotas', tipoItem: 'classe', campos: ['capital.quotas'], avaliar: (_c, it) => (it as ClasseQuota).preferencia_lucros },
   { nome: 'classe.prioridade_reembolso', rotulo: 'A classe tem prioridade no reembolso', grupo: 'Classe de quotas', tipoItem: 'classe', campos: ['capital.quotas'], avaliar: (_c, it) => (it as ClasseQuota).prioridade_reembolso },
   { nome: 'classe.elege_administrador', rotulo: 'A classe elege administrador em separado', grupo: 'Classe de quotas', tipoItem: 'classe', campos: ['capital.quotas'], avaliar: (_c, it) => (it as ClasseQuota).elege_administrador },
+  // ----- Alteração: o que mudou em relação ao cadastro vigente -----
+  { nome: 'mudou_razao_social', rotulo: 'O nome empresarial mudou', grupo: 'Alteração', campos: ['empresa.razao_social'], avaliar: (c) => !!c.dadosAntes && c.dadosAntes.razao_social.trim().toUpperCase() !== c.dados.razao_social.trim().toUpperCase() },
+  { nome: 'mudou_sede', rotulo: 'O endereço da sede mudou', grupo: 'Alteração', campos: ['empresa.sede'], avaliar: (c) => !!c.dadosAntes && mudouSede(c.dadosAntes, c.dados) },
+  { nome: 'mudou_objeto', rotulo: 'O objeto social mudou', grupo: 'Alteração', campos: ['empresa.objeto_social'], avaliar: (c) => !!c.dadosAntes && mudouObjeto(c.dadosAntes, c.dados) },
+  { nome: 'mudou_cnaes', rotulo: 'Os CNAEs mudaram', grupo: 'Alteração', campos: ['empresa.cnaes'], avaliar: (c) => !!c.dadosAntes && mudouCnaes(c.dadosAntes, c.dados) },
+  { nome: 'mudou_capital', rotulo: 'O valor do capital mudou', grupo: 'Alteração', campos: ['capital.valor'], avaliar: (c) => !!c.dadosAntes && c.dadosAntes.capital.valor_centavos !== c.dados.capital.valor_centavos },
+  { nome: 'mudou_enquadramento', rotulo: 'O enquadramento (ME/EPP) mudou', grupo: 'Alteração', campos: ['empresa.enquadramento'], avaliar: (c) => !!c.dadosAntes && (c.dadosAntes.enquadramento || 'nenhum') !== (c.dados.enquadramento || 'nenhum') },
+  { nome: 'mudou_administracao', rotulo: 'A administração mudou', grupo: 'Alteração', campos: ['administracao.administradores'], avaliar: (c) => !!c.dadosAntes && mudouAdministracao(c.dadosAntes, c.dados) },
+  { nome: 'houve_aumento', rotulo: 'Houve aumento de capital', grupo: 'Alteração', campos: ['alteracao.quotas'], avaliar: (c) => temMovimento(c, 'aumento') },
+  { nome: 'houve_reducao', rotulo: 'Houve redução de capital', grupo: 'Alteração', campos: ['alteracao.quotas'], avaliar: (c) => temMovimento(c, 'reducao') },
+  { nome: 'houve_cessao', rotulo: 'Houve cessão de quotas', grupo: 'Alteração', campos: ['alteracao.quotas'], avaliar: (c) => temMovimento(c, 'cessao') },
+  { nome: 'mudou_quadro', rotulo: 'O quadro de quotas mudou (aumento, redução ou cessão)', grupo: 'Alteração', campos: ['alteracao.quotas'], avaliar: (c) => !!c.dadosAntes && (c.movimentos ?? []).length > 0 },
+  { nome: 'entrou_socio', rotulo: 'Entrou sócio', grupo: 'Alteração', campos: ['alteracao.quotas'], avaliar: (c) => !!c.dadosAntes && ingressantes(c.dadosAntes, c.dados).length > 0 },
+  { nome: 'saiu_socio', rotulo: 'Saiu sócio', grupo: 'Alteração', campos: ['alteracao.quotas'], avaliar: (c) => !!c.dadosAntes && retirantes(c.dadosAntes, c.dados).length > 0 },
+  { nome: 'consolidacao', rotulo: 'O texto é do contrato consolidado (não da abertura)', grupo: 'Situação', campos: [], avaliar: (c) => c.modoArea === 'consolidacao' },
+  { nome: 'cessao.tem_preco', rotulo: 'A cessão tem preço informado', grupo: 'Cessão de quotas', tipoItem: 'cessao', campos: ['alteracao.quotas'], avaliar: (_c, it) => (it as ItemCessao).movimento.preco_centavos > 0 },
+  { nome: 'cessao.cessionario_ingressa', rotulo: 'Quem recebe entra na sociedade', grupo: 'Cessão de quotas', tipoItem: 'cessao', campos: ['alteracao.quotas'], avaliar: (_c, it) => (it as ItemCessao).cessionarioIngressa },
+  { nome: 'cessao.cedente_se_retira', rotulo: 'Quem cede sai da sociedade', grupo: 'Cessão de quotas', tipoItem: 'cessao', campos: ['alteracao.quotas'], avaliar: (_c, it) => (it as ItemCessao).cedenteSeRetira },
+  // ----- Distrato -----
+  {
+    nome: 'distrato.liquidacao',
+    rotulo: 'Resultado da liquidação',
+    grupo: 'Distrato',
+    valores: [
+      { valor: 'sem_haveres', rotulo: 'sem bens e sem haveres' },
+      { valor: 'partilha', rotulo: 'com partilha de haveres' },
+    ],
+    campos: ['distrato.liquidacao'],
+    avaliar: (c) => c.distrato?.liquidacao ?? '',
+  },
 ];
 
 // ---------------- Busca por nome, considerando o escopo ----------------

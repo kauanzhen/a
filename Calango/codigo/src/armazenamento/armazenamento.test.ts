@@ -25,6 +25,25 @@ describe('inicialização da pasta de dados', () => {
     expect(segunda.nova).toBe(false);
     expect(segunda.clausulasCriadas).toBe(0);
   });
+  it('atualiza a biblioteca: cria blocos novos, revisa os não editados e não toca nos editados', async () => {
+    const { fs, repo } = criar();
+    await repo.inicializar();
+    // simula uma pasta da versão anterior: falta um bloco, um bloco antigo não editado e um editado pelo usuário
+    await fs.excluir('clausulas/ratificacao.json');
+    const duracao = JSON.parse((await fs.lerTexto('clausulas/duracao.json'))!.texto);
+    await fs.gravar('clausulas/duracao.json', JSON.stringify({ ...duracao, corpo: 'texto antigo do sistema' }));
+    const foro = JSON.parse((await fs.lerTexto('clausulas/foro.json'))!.texto);
+    const editado = { ...foro, corpo: 'texto do usuário', versao: 2, historico: [{ ...foro, versao: 1, salvo_em: '' }] };
+    await fs.gravar('clausulas/foro.json', JSON.stringify(editado));
+    const r = await repo.inicializar();
+    expect(r.clausulasCriadas).toBe(1);
+    expect(r.clausulasAtualizadas).toBe(1);
+    const d2 = JSON.parse((await fs.lerTexto('clausulas/duracao.json'))!.texto);
+    expect(d2.corpo).toContain('[se consolidacao]');
+    expect(d2.versao).toBe(2);
+    expect(d2.historico[0].corpo).toBe('texto antigo do sistema');
+    expect(JSON.parse((await fs.lerTexto('clausulas/foro.json'))!.texto).corpo).toBe('texto do usuário');
+  });
   it('avisa quando a pasta parece ser de outro programa', async () => {
     const { fs, repo } = criar();
     expect(await repo.pastaPareceEstranha()).toBe(false);

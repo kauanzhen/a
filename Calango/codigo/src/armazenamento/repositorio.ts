@@ -16,7 +16,7 @@
 import { diasEntre, hojeISO } from '../lib/datas';
 import { paraSlug } from '../lib/texto';
 import { bibliotecaInicial } from '../biblioteca/inicial';
-import type { Clausula } from '../motor/clausula';
+import { extrairConteudo, type Clausula } from '../motor/clausula';
 import type { Empresa } from '../dados/tipos';
 import { normalizarDados } from '../dados/fabricas';
 import { normalizarConfiguracoes, type Configuracoes } from './configuracoes';
@@ -144,22 +144,60 @@ export class Repositorio {
    * Prepara a pasta: cria configuracoes.json e grava a biblioteca inicial se a
    * pasta clausulas/ estiver vazia. Também limpa backups antigos.
    */
-  async inicializar(): Promise<{ nova: boolean; clausulasCriadas: number; backupsApagados: number }> {
+  async inicializar(): Promise<{ nova: boolean; clausulasCriadas: number; clausulasAtualizadas: number; backupsApagados: number }> {
     let nova = false;
     if ((await this.fs.modificadoEm('configuracoes.json')) === null) {
       nova = true;
       await this.gravarJson('configuracoes.json', normalizarConfiguracoes(null));
     }
-    let clausulasCriadas = 0;
-    const existentes = (await this.fs.listar('clausulas')).filter((e) => e.nome.endsWith('.json'));
-    if (existentes.length === 0) {
-      for (const c of bibliotecaInicial(this.relogio().toISOString())) {
-        await this.fs.gravar(`clausulas/${c.id}.json`, JSON.stringify(c, null, 2));
-        clausulasCriadas++;
-      }
-    }
+    const { criadas, atualizadas } = await this.atualizarBiblioteca();
     const backupsApagados = await this.limparBackupsAntigos();
-    return { nova, clausulasCriadas, backupsApagados };
+    return { nova, clausulasCriadas: criadas, clausulasAtualizadas: atualizadas, backupsApagados };
+  }
+
+  /**
+   * Leva para a pasta de dados as cláusulas novas da biblioteca do sistema
+   * (ex.: blocos de alteração e distrato que chegaram numa nova versão).
+   * - Cláusula que não existe na pasta: é criada.
+   * - Cláusula da biblioteca inicial que o usuário NUNCA editou: recebe o texto
+   *   novo como uma nova versão (a anterior fica no histórico).
+   * - Cláusula editada pelo usuário: nunca é tocada.
+   */
+  async atualizarBiblioteca(): Promise<{ criadas: number; atualizadas: number }> {
+    const agora = this.relogio().toISOString();
+    const existentes = new Set(
+      (await this.fs.listar('clausulas')).filter((e) => e.tipo === 'arquivo' && e.nome.endsWith('.json')).map((e) => e.nome.replace(/\.json$/, '')),
+    );
+    let criadas = 0;
+    let atualizadas = 0;
+    for (const nova of bibliotecaInicial(agora)) {
+      const caminho = `clausulas/${nova.id}.json`;
+      if (!existentes.has(nova.id)) {
+        await this.fs.gravar(caminho, JSON.stringify(nova, null, 2));
+        criadas++;
+        continue;
+      }
+      let atual: Lido<Clausula> | null = null;
+      try {
+        atual = await this.lerJson<Clausula>(caminho);
+      } catch {
+        continue; // arquivo com problema: não mexe (o usuário é avisado na lista)
+      }
+      const c = atual?.dados;
+      if (!c || c.origem !== 'biblioteca-inicial' || c.historico.length > 0) continue;
+      const mudou =
+        c.corpo !== nova.corpo ||
+        c.titulo_interno !== nova.titulo_interno ||
+        JSON.stringify(c.documentos) !== JSON.stringify(nova.documentos) ||
+        JSON.stringify(c.tipo_societario) !== JSON.stringify(nova.tipo_societario) ||
+        JSON.stringify(c.regras) !== JSON.stringify(nova.regras);
+      if (!mudou) continue;
+      const anterior = { ...extrairConteudo(c), versao: c.versao, salvo_em: c.atualizada_em };
+      const atualizada: Clausula = { ...c, ...extrairConteudo(nova), versao: c.versao + 1, historico: [anterior], atualizada_em: agora };
+      await this.gravarJson(caminho, atualizada);
+      atualizadas++;
+    }
+    return { criadas, atualizadas };
   }
 
   // ---------------- Configurações ----------------
@@ -259,12 +297,17 @@ export class Repositorio {
 export function normalizarEmpresa(e: Empresa): Empresa {
   return {
     ...e,
+    extinta_em: e.extinta_em ?? '',
     vigente: e.vigente ? normalizarDados(e.vigente) : null,
     atos: (e.atos ?? []).map((a) => ({
       ...a,
       dados_antes: a.dados_antes ? normalizarDados(a.dados_antes) : null,
       dados_depois: normalizarDados(a.dados_depois ?? {}),
       selecao: a.selecao ?? {},
+      movimentos: a.movimentos ?? [],
+      distrato: a.distrato ?? null,
+      extras: a.extras ?? {},
+      estrutura_gerada: a.estrutura_gerada ?? null,
     })),
   };
 }

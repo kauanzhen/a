@@ -200,6 +200,8 @@ describe('montagem com numeração automática', () => {
     descricao: '',
     disponivel: true,
     empresa: 'nova' as const,
+    tipos_societarios: ['ltda'],
+    efeito_registro: 'constituicao' as const,
     areas: [{ id: 'corpo', nome: 'Corpo', numerada: true, estilo: 'texto' as const, editavel: true }],
     padrao: {},
   };

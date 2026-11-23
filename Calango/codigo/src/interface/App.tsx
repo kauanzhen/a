@@ -63,7 +63,13 @@ export function App() {
         const sessao = await carregarSessao(repo);
         setEstado({ fase: 'pronta', sessao });
         if (ini.nova) avisar('ok', `Pasta de dados "${handle.name}" preparada. Biblioteca inicial criada com ${ini.clausulasCriadas} cláusulas.`);
-        else if (ini.clausulasCriadas) avisar('info', `A pasta não tinha cláusulas: a biblioteca inicial foi criada (${ini.clausulasCriadas}).`);
+        else if (ini.clausulasCriadas || ini.clausulasAtualizadas)
+          avisar(
+            'info',
+            `Biblioteca atualizada com a nova versão do Calango: ${ini.clausulasCriadas} cláusula(s) nova(s)` +
+              (ini.clausulasAtualizadas ? ` e ${ini.clausulasAtualizadas} cláusula(s) do sistema com texto revisado (a versão anterior ficou no histórico)` : '') +
+              '. Cláusulas que você editou não foram alteradas.',
+          );
       } catch (e) {
         setEstado({ fase: 'liberar', handle, erro: mensagemDeErro(e) });
       }

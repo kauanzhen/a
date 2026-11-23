@@ -2,7 +2,7 @@
 
 import { novoId } from '../lib/texto';
 import { hojeISO } from '../lib/datas';
-import type { Ato, ClasseQuota, DadosEmpresa, Empresa, Endereco, OpcoesAto, Pessoa } from './tipos';
+import type { Ato, ClasseQuota, DadosDistrato, DadosEmpresa, Empresa, Endereco, OpcoesAto, Pessoa } from './tipos';
 
 export function enderecoVazio(): Endereco {
   return { logradouro: '', numero: '', complemento: '', bairro: '', cidade: '', uf: '', cep: '' };
@@ -78,6 +78,8 @@ export function dadosVazios(): DadosEmpresa {
     pro_labore: [],
     foro: { cidade: '', uf: '' },
     exercicio: { inicio: '01-01', fim: '12-31' },
+    numeracao_clausulas: {},
+    clausulas_vigentes: [],
   };
 }
 
@@ -106,6 +108,20 @@ export function novoAto(tipoDocumento: string, dadosAntes: DadosEmpresa | null, 
     opcoes,
     registro: null,
     arquivo_gerado: '',
+    movimentos: [],
+    distrato: null,
+    extras: {},
+    estrutura_gerada: null,
+  };
+}
+
+export function distratoVazio(): DadosDistrato {
+  return {
+    data_encerramento: '',
+    liquidacao: 'sem_haveres',
+    partilha_descricao: '',
+    responsavel_ativo_passivo_id: '',
+    responsavel_livros_id: '',
   };
 }
 
@@ -120,6 +136,7 @@ export function novaEmpresa(tipoSocietario: string): Empresa {
     atualizada_em: agora,
     vigente: null,
     atos: [],
+    extinta_em: '',
   };
 }
 
@@ -139,5 +156,7 @@ export function normalizarDados(d: Partial<DadosEmpresa>): DadosEmpresa {
   r.participacoes = d.participacoes ?? [];
   r.cnaes = d.cnaes ?? [];
   r.pro_labore = d.pro_labore ?? [];
+  r.numeracao_clausulas = d.numeracao_clausulas ?? {};
+  r.clausulas_vigentes = d.clausulas_vigentes ?? [];
   return r;
 }

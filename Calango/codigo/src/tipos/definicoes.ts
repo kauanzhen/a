@@ -22,6 +22,10 @@ export interface DefinicaoTipoSocietario {
   bloco_qualificacao_pessoa_fisica: string;
   /** Documentos que este tipo aceita (ids de DefinicaoDocumento). */
   documentos: string[];
+  /** Número máximo de membros (EI = 1 titular). Vazio = sem limite. */
+  max_membros?: number;
+  /** Campos do formulário no cadastro direto de uma empresa deste tipo. */
+  campos_cadastro: string[];
 }
 
 export type EstiloParagrafo =
@@ -48,6 +52,12 @@ export interface DefinicaoArea {
   editavel: boolean;
   /** Explicação mostrada na Etapa 1. */
   ajuda?: string;
+  /** Numeração das cláusulas: "nova" recomeça em PRIMEIRA (padrão); "continua" segue a área anterior. */
+  numeracao?: 'nova' | 'continua';
+  /** "consolidacao": texto do contrato consolidado (as cláusulas podem usar a condição "consolidacao"). */
+  modo?: 'consolidacao';
+  /** As cláusulas padrão desta área vêm do contrato vigente da empresa (se houver). */
+  padrao_contrato_vigente?: boolean;
 }
 
 export interface DefinicaoDocumento {
@@ -60,6 +70,16 @@ export interface DefinicaoDocumento {
   disponivel: boolean;
   fase?: string;
   empresa: 'nova' | 'existente';
+  /** Tipos societários em que o documento pode ser feito. */
+  tipos_societarios: string[];
+  /** Transformação: tipo societário da empresa depois do registro. */
+  tipo_depois?: string;
+  /** Só para empresas com um único sócio. */
+  exige_unipessoal?: boolean;
+  /** O que acontece quando o ato é marcado como registrado. */
+  efeito_registro: 'constituicao' | 'alteracao' | 'extincao' | 'transformacao';
+  /** Área cujas cláusulas passam a ser o contrato vigente após o registro (para numerar as próximas alterações). */
+  area_contrato_vigente?: string;
   areas: DefinicaoArea[];
   /** Blocos carregados por padrão em cada área, na ordem. */
   padrao: Record<string, string[]>;

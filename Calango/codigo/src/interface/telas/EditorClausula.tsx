@@ -351,6 +351,8 @@ export function EditorClausula(p: { id: string | null; duplicarDe?: string }) {
       descricao: '',
       disponivel: true,
       empresa: 'nova',
+      tipos_societarios: ['ltda'],
+      efeito_registro: 'constituicao',
       areas: [{ id: 'a', nome: '', numerada: conteudo.tipo_bloco !== 'texto', estilo: 'texto', editavel: false }],
       padrao: {},
     };
@@ -366,7 +368,7 @@ export function EditorClausula(p: { id: string | null; duplicarDe?: string }) {
         buscarClausula: (id) => (id === '__previa__' ? previaClausula : buscar(id)),
       });
     } catch (e) {
-      return { elementos: [], pendencias: [{ nivel: 'erro' as const, mensagem: mensagemDeErro(e) }], usadas: [], titulo: '' };
+      return { elementos: [], pendencias: [{ nivel: 'erro' as const, mensagem: mensagemDeErro(e) }], usadas: [], numeracao: [], titulo: '' };
     }
   }, [rascunho, exemploId, conteudo.tipo_bloco]); // eslint-disable-line react-hooks/exhaustive-deps
 

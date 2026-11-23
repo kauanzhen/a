@@ -3,7 +3,7 @@
 // texto. Também aponta nomes desconhecidos (para o editor avisar).
 
 import type { DefinicaoTipoSocietario } from '../tipos/definicoes';
-import { buscarDefItem, colecao, CONDICOES, tipoItem, VARIAVEIS } from './catalogo';
+import { buscarDefItem, colecao, CONDICOES, itemFixo, ITENS_FIXOS, tipoItem, VARIAVEIS } from './catalogo';
 import type { ConteudoClausula } from './clausula';
 import { nomesDaExpressao, type Expr } from './expressao';
 import { analisarCorpo, type ErroSintaxe, type No, type NoInline } from './sintaxe';
@@ -30,20 +30,28 @@ export function camposDoCorpo(
     if (!errosOut.some((e) => e.linha === linha && e.mensagem === mensagem)) errosOut.push({ linha, mensagem });
   };
   const add = (lista: string[]) => lista.forEach((c) => campos.add(c));
+  const ANT = 'anterior.';
 
   const comAlias = (al: Aliases, item: string, nomeColecao: string, linha: number): Aliases => {
-    const col = colecao(nomeColecao);
+    // Listas "anterior." vêm do cadastro vigente: não pedem campos no formulário.
+    const anterior = nomeColecao.startsWith(ANT);
+    const col = colecao(anterior ? nomeColecao.slice(ANT.length) : nomeColecao);
     if (!col) {
       erro(linha, `Lista desconhecida em [para cada]: "${nomeColecao}".`);
       return al;
     }
-    add(col.campos);
+    if (!anterior) add(col.campos);
     const novo = { ...al, [item]: col.tipoItem };
     if (item !== 'pessoa' && tipoItem(col.tipoItem)?.pai === 'pessoa') novo.pessoa = 'pessoa';
     return novo;
   };
 
-  const variavel = (nome: string, al: Aliases, linha: number) => {
+  const variavel = (nome: string, al: Aliases, linha: number, semCampos = false) => {
+    if (nome.startsWith(ANT)) return variavel(nome.slice(ANT.length), al, linha, true);
+    if (nome.startsWith('clausula_vigente.')) {
+      add(['alteracao.numeracao']);
+      return;
+    }
     if (nome.startsWith('vocab.')) {
       if (!tipo.vocabulario[nome.slice(6)]) erro(linha, `Palavra do vocabulário desconhecida: "${nome}".`);
       return;
@@ -53,6 +61,8 @@ export function camposDoCorpo(
     let def = undefined as (typeof VARIAVEIS)[number] | undefined;
     if (alias && al[alias]) {
       def = buscarDefItem(VARIAVEIS, al[alias], nome.slice(ponto + 1))?.def;
+      const fixo = itemFixo(alias);
+      if (fixo && !semCampos) add(fixo.campos);
     } else {
       def = VARIAVEIS.find((v) => v.nome === nome && !v.tipoItem);
       if (!def && pareceVariavelDeItem(nome)) {
@@ -64,7 +74,7 @@ export function camposDoCorpo(
       erro(linha, `Variável desconhecida: {{${nome}}}.`);
       return;
     }
-    add(def.campos);
+    if (!semCampos) add(def.campos);
     if (def.bloco) {
       const id = def.bloco(tipo);
       if (!visitados.has(id)) {
@@ -79,31 +89,43 @@ export function camposDoCorpo(
 
   const condicao = (x: Expr | null, al: Aliases, linha: number) => {
     if (!x) return;
-    for (const nome of nomesDaExpressao(x)) {
+    for (const nomeOriginal of nomesDaExpressao(x)) {
+      const anterior = nomeOriginal.startsWith(ANT);
+      const nome = anterior ? nomeOriginal.slice(ANT.length) : nomeOriginal;
+      const addC = (l: string[]) => !anterior && add(l);
       const ponto = nome.indexOf('.');
       const alias = ponto > 0 ? nome.slice(0, ponto) : '';
       if (alias && al[alias]) {
         const campo = nome.slice(ponto + 1);
         const c = buscarDefItem(CONDICOES, al[alias], campo)?.def ?? buscarDefItem(VARIAVEIS, al[alias], campo)?.def;
-        if (c) add(c.campos);
-        else erro(linha, `Condição desconhecida: "${nome}".`);
+        if (c) addC(c.campos);
+        else erro(linha, `Condição desconhecida: "${nomeOriginal}".`);
         continue;
       }
       const c = CONDICOES.find((k) => k.nome === nome && !k.tipoItem) ?? VARIAVEIS.find((v) => v.nome === nome && !v.tipoItem);
-      if (c) add(c.campos);
-      else erro(linha, `Condição desconhecida: "${nome}".`);
+      if (c) addC(c.campos);
+      else erro(linha, `Condição desconhecida: "${nomeOriginal}".`);
     }
   };
 
-  const referencia = (nome: string, al: Aliases, linha: number) => {
+  const referencia = (nomeOriginal: string, al: Aliases, linha: number) => {
+    const anterior = nomeOriginal.startsWith(ANT);
+    const nome = anterior ? nomeOriginal.slice(ANT.length) : nomeOriginal;
     if (al[nome]) {
       const t = tipoItem(al[nome]);
       if (t?.referente) campos.add('pessoa.genero');
+      const fixo = itemFixo(nome);
+      if (fixo && !anterior) add(fixo.campos);
+      return;
+    }
+    const ponto = nome.indexOf('.');
+    if (ponto > 0 && al[nome.slice(0, ponto)] && tipoItem(al[nome.slice(0, ponto)])?.pessoas?.[nome.slice(ponto + 1)]) {
+      campos.add('pessoa.genero');
       return;
     }
     const col = colecao(nome);
     if (col) {
-      add(col.campos);
+      if (!anterior) add(col.campos);
       if (tipoItem(col.tipoItem)?.referente) campos.add('pessoa.genero');
       return;
     }
@@ -158,7 +180,9 @@ export function camposDoCorpo(
     }
   };
 
-  blocos(nos, aliasesIniciais);
+  const fixos: Aliases = {};
+  for (const f of ITENS_FIXOS) fixos[f.nome] = f.tipoItem;
+  blocos(nos, { ...fixos, ...aliasesIniciais });
   return { campos: [...campos].sort(), erros: errosOut.sort((a, b) => a.linha - b.linha) };
 }
 
@@ -186,4 +210,11 @@ export function camposDaClausula(
  */
 export function aliasesDoBloco(id: string | undefined, tipo: DefinicaoTipoSocietario): Record<string, string> {
   return id && id === tipo.bloco_qualificacao_pessoa_fisica ? { pessoa: 'pessoa' } : {};
+}
+
+/** Ids das cláusulas citadas como {{clausula_vigente.ID}} nos textos (para pedir a numeração do contrato vigente). */
+export function clausulasCitadas(corpos: string[]): string[] {
+  const r = new Set<string>();
+  for (const c of corpos) for (const m of c.matchAll(/\{\{\s*clausula_vigente\.([\w-]+)\s*\}\}/g)) r.add(m[1]);
+  return [...r];
 }

@@ -12,6 +12,8 @@ export const SECOES: Secao[] = [
   { id: 'socios', nome: 'Sócios' },
   { id: 'capital', nome: 'Capital e quotas' },
   { id: 'administracao', nome: 'Administração' },
+  { id: 'alteracao', nome: 'Alteração: quotas e contrato vigente' },
+  { id: 'distrato', nome: 'Distrato' },
   { id: 'fechamento', nome: 'Fechamento' },
 ];
 
@@ -53,6 +55,15 @@ export const CAMPOS: DefCampo[] = [
 
   { id: 'capital.quotas', secao: 'capital', rotulo: 'Capital social, quotas e participação de cada sócio' },
   { id: 'capital.integralizacao', secao: 'capital', rotulo: 'Forma de integralização' },
+  { id: 'capital.valor', secao: 'capital', rotulo: 'Capital (sem divisão em quotas)' },
+
+  { id: 'alteracao.quotas', secao: 'alteracao', rotulo: 'Aumento, redução e cessão de quotas (entrada e saída de sócios)' },
+  { id: 'alteracao.motivo_reducao', secao: 'alteracao', rotulo: 'Motivo da redução de capital' },
+  { id: 'alteracao.numeracao', secao: 'alteracao', rotulo: 'Número das cláusulas no contrato vigente' },
+
+  { id: 'distrato.data_encerramento', secao: 'distrato', rotulo: 'Data de encerramento das atividades' },
+  { id: 'distrato.liquidacao', secao: 'distrato', rotulo: 'Liquidação (sem haveres ou com partilha)' },
+  { id: 'distrato.responsaveis', secao: 'distrato', rotulo: 'Responsáveis pelo ativo/passivo e pela guarda dos livros' },
 
   { id: 'administracao.administradores', secao: 'administracao', rotulo: 'Administradores e forma de administração' },
   { id: 'administracao.pro_labore', secao: 'administracao', rotulo: 'Sócios com pró-labore' },

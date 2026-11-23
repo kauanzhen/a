@@ -120,6 +120,31 @@ export interface DadosEmpresa {
   pro_labore: string[]; // ids de pessoas
   foro: { cidade: string; uf: string };
   exercicio: { inicio: string; fim: string }; // "MM-DD"
+  /**
+   * Contrato vigente: número de cada cláusula (id da biblioteca -> número),
+   * para as alterações citarem "Cláusula Quinta". Vem do último contrato
+   * registrado pelo Calango ou é informado à mão para empresas antigas.
+   */
+  numeracao_clausulas: Record<string, number>;
+  /** Contrato vigente: ids dos blocos do corpo, na ordem (base da consolidação). */
+  clausulas_vigentes: string[];
+}
+
+// ---------------- Movimentação de quotas (alteração) ----------------
+
+export type MovimentoQuotas =
+  | { id: string; tipo: 'cessao'; cedente_id: string; cessionario_id: string; classe_id: string; quotas: number; preco_centavos: number }
+  | { id: string; tipo: 'aumento'; socio_id: string; classe_id: string; quotas: number }
+  | { id: string; tipo: 'reducao'; socio_id: string; classe_id: string; quotas: number };
+
+// ---------------- Distrato ----------------
+
+export interface DadosDistrato {
+  data_encerramento: string;
+  liquidacao: 'sem_haveres' | 'partilha';
+  partilha_descricao: string;
+  responsavel_ativo_passivo_id: string;
+  responsavel_livros_id: string;
 }
 
 // ---------------- Atos (documentos gerados) ----------------
@@ -155,6 +180,14 @@ export interface Ato {
   opcoes: OpcoesAto;
   registro: { data: string; numero: string } | null;
   arquivo_gerado: string;
+  /** Alteração: aumentos, reduções e cessões de quotas (o novo quadro é calculado a partir deles). */
+  movimentos: MovimentoQuotas[];
+  /** Distrato: dados próprios do encerramento. */
+  distrato: DadosDistrato | null;
+  /** Textos livres do ato (ex.: motivo da redução de capital). */
+  extras: Record<string, string>;
+  /** Ao gerar: cláusulas e numeração do contrato que passa a valer quando o ato for registrado. */
+  estrutura_gerada: { clausulas: string[]; numeracao: Record<string, number> } | null;
 }
 
 export interface Empresa {
@@ -167,4 +200,6 @@ export interface Empresa {
   /** Cadastro vigente. null enquanto a empresa está em abertura (nada registrado). */
   vigente: DadosEmpresa | null;
   atos: Ato[];
+  /** Data do registro do distrato (empresa extinta). Vazio = ativa. */
+  extinta_em: string;
 }

@@ -8,6 +8,8 @@ import {
   colecao,
   CONDICOES,
   converterItem,
+  itemFixo,
+  ITENS_FIXOS,
   referenteDaColecao,
   tipoItem,
   VARIAVEIS,
@@ -20,7 +22,17 @@ import {
 } from './catalogo';
 import { avaliarExpressao, type Expr } from './expressao';
 import { analisarCorpo, type Marcador, type No, type NoInline, type OpcoesRepeticao } from './sintaxe';
-import type { Pessoa } from '../dados/tipos';
+import type { DadosEmpresa, Pessoa } from '../dados/tipos';
+import { ordinalPorExtenso } from '../gramatica/ordinais';
+import { capitalizarPalavras } from '../lib/texto';
+
+const ANTERIOR = 'anterior.';
+const CLAUSULA_VIGENTE = 'clausula_vigente.';
+
+/** "Cláusula Quinta" a partir do número. */
+export function nomeDaClausula(n: number): string {
+  return `Cláusula ${capitalizarPalavras(ordinalPorExtenso(n, 'f'))}`;
+}
 
 export type SaidaBloco =
   | { tipo: 'linha'; marcador: Marcador; trechos: Trecho[] }
@@ -110,7 +122,7 @@ export class Avaliador {
     const errAntes = this.erros.length;
     const { nos, erros } = analisarCorpo(corpo);
     for (const e of erros) this.erro(e.linha, e.mensagem);
-    const saida = this.avaliarNos(nos, escopo);
+    const saida = this.avaliarNos(nos, this.escopoInicial(escopo));
     return {
       saida,
       pendencias: this.pendencias.slice(pendAntes),
@@ -127,7 +139,43 @@ export class Avaliador {
     }
     const no = nos[0];
     if (no?.tipo !== 'se' || !no.ramos[0].condicao) return true;
-    return this.avaliarCondicao(no.ramos[0].condicao, escopo, 0);
+    return this.avaliarCondicao(no.ramos[0].condicao, this.escopoInicial(escopo), 0);
+  }
+
+  /** Define o modo da área que está sendo montada (ex.: "consolidacao"). */
+  definirModoArea(modo: string | undefined) {
+    this.ctx.modoArea = modo;
+  }
+
+  /** Pessoas nomeadas (ex.: responsável pelos livros no distrato) ficam sempre disponíveis. */
+  private escopoInicial(esc: Escopo): Escopo {
+    const r: Escopo = {};
+    for (const f of ITENS_FIXOS) {
+      const v = f.obter(this.ctx);
+      if (v) r[f.nome] = { tipo: f.tipoItem, valor: v, indice: 0, total: 1 };
+    }
+    return { ...r, ...esc };
+  }
+
+  /** Executa com os dados trocados (ex.: dados anteriores ao ato). */
+  private comDados<T>(d: DadosEmpresa | undefined | null, fn: () => T): T {
+    if (!d || d === this.ctx.dados) return fn();
+    const salvo = this.ctx.dados;
+    this.ctx.dados = d;
+    try {
+      return fn();
+    } finally {
+      this.ctx.dados = salvo;
+    }
+  }
+
+  /** Nome sem o prefixo "anterior." (ou null, com erro, se o ato não tem dados anteriores). */
+  private semAnterior(nome: string, linha: number): string | null {
+    if (!this.ctx.dadosAntes) {
+      this.erro(linha, `"${nome}": os dados anteriores só existem em documentos sobre empresa já registrada (alteração, distrato, transformação).`);
+      return null;
+    }
+    return nome.slice(ANTERIOR.length);
   }
 
   private erro(linha: number, mensagem: string) {
@@ -168,6 +216,25 @@ export class Avaliador {
   // ----- Resolução de nomes -----
 
   private resolverVariavel(nome: string, esc: Escopo, linha: number): { def?: DefVariavel; valor: Valor; dono?: string } {
+    if (nome.startsWith(ANTERIOR)) {
+      const resto = this.semAnterior(nome, linha);
+      if (resto === null) return { valor: '' };
+      return this.comDados(this.ctx.dadosAntes, () => this.resolverVariavel(resto, esc, linha));
+    }
+    if (nome.startsWith(CLAUSULA_VIGENTE)) {
+      const id = nome.slice(CLAUSULA_VIGENTE.length);
+      const base = this.ctx.dadosAntes ?? this.ctx.dados;
+      const titulo = this.ctx.buscarClausula(id)?.titulo_interno ?? id;
+      const def: DefVariavel = {
+        nome,
+        rotulo: `número da cláusula “${titulo}” no contrato vigente`,
+        grupo: 'Contrato vigente',
+        campos: ['alteracao.numeracao'],
+        resolver: () => '',
+      };
+      const n = base.numeracao_clausulas?.[id];
+      return { def, valor: n ? nomeDaClausula(n) : '' };
+    }
     if (nome.startsWith('vocab.')) {
       const formas = this.ctx.tipo.vocabulario[nome.slice(6)];
       if (!formas) this.erro(linha, `Palavra do vocabulário desconhecida: "${nome}".`);
@@ -186,7 +253,17 @@ export class Avaliador {
         }
         const valorItem = converterItem(it.valor, achado.cadeia);
         const dono = (valorItem as Pessoa)?.nome ?? undefined;
-        return { def: achado.def, valor: achado.def.resolver(this.ctx, valorItem, esc), dono };
+        return { def: achado.def, valor: this.comDados(it.dados, () => achado.def.resolver(this.ctx, valorItem, esc)), dono };
+      }
+      const fixo = itemFixo(alias);
+      if (fixo) {
+        const achado = buscarDefItem(VARIAVEIS, fixo.tipoItem, campo);
+        if (!achado) {
+          this.erro(linha, `Variável desconhecida: {{${nome}}}.`);
+          return { valor: `[?${nome}]` };
+        }
+        // Pessoa ainda não escolhida: vira pendência.
+        return { def: { ...achado.def, rotulo: fixo.rotulo, campos: fixo.campos, opcional: false }, valor: '' };
       }
     }
     const def = VARIAVEIS.find((v) => v.nome === nome && !v.tipoItem);
@@ -204,6 +281,11 @@ export class Avaliador {
   }
 
   private valorCondicao(nome: string, esc: Escopo, linha: number): boolean | string {
+    if (nome.startsWith(ANTERIOR)) {
+      const resto = this.semAnterior(nome, linha);
+      if (resto === null) return false;
+      return this.comDados(this.ctx.dadosAntes, () => this.valorCondicao(resto, esc, linha));
+    }
     const ponto = nome.indexOf('.');
     if (ponto > 0) {
       const alias = nome.slice(0, ponto);
@@ -211,10 +293,10 @@ export class Avaliador {
       if (it) {
         const campo = nome.slice(ponto + 1);
         const achado = buscarDefItem(CONDICOES, it.tipo, campo);
-        if (achado) return achado.def.avaliar(this.ctx, converterItem(it.valor, achado.cadeia), esc);
+        if (achado) return this.comDados(it.dados, () => achado.def.avaliar(this.ctx, converterItem(it.valor, achado.cadeia), esc));
         const v = buscarDefItem(VARIAVEIS, it.tipo, campo);
         if (v) {
-          const val = v.def.resolver(this.ctx, converterItem(it.valor, v.cadeia), esc);
+          const val = this.comDados(it.dados, () => v.def.resolver(this.ctx, converterItem(it.valor, v.cadeia), esc));
           return !vazio(val) ? 'sim' : '';
         }
         this.erro(linha, `Condição desconhecida: "${nome}".`);
@@ -234,36 +316,57 @@ export class Avaliador {
   }
 
   private referente(nome: string, esc: Escopo, linha: number): Referente {
+    if (nome.startsWith(ANTERIOR)) {
+      const resto = this.semAnterior(nome, linha);
+      if (resto === null) return { genero: 'M', plural: false };
+      return this.comDados(this.ctx.dadosAntes, () => this.referente(resto, esc, linha));
+    }
     const it = esc[nome];
     if (it) {
       const t = tipoItem(it.tipo);
       if (t?.referente) return t.referente(it.valor);
       return { genero: 'M', plural: false };
     }
+    const ponto = nome.indexOf('.');
+    if (ponto > 0) {
+      const dono = esc[nome.slice(0, ponto)];
+      const f = dono ? tipoItem(dono.tipo)?.pessoas?.[nome.slice(ponto + 1)] : undefined;
+      if (f) {
+        const p = f(dono!.valor);
+        return { genero: p?.genero === 'F' ? 'F' : 'M', plural: false };
+      }
+    }
+    if (itemFixo(nome)) return { genero: 'M', plural: false };
     const c = colecao(nome);
     if (c) return referenteDaColecao(c, this.ctx);
     this.erro(linha, `Concordância com referência desconhecida: "${nome}". Use, por exemplo, socios, administradores ou o item da repetição.`);
     return { genero: 'M', plural: false };
   }
 
-  private vincular(esc: Escopo, alias: string, col: DefColecao, valor: unknown, indice: number, total: number): Escopo {
+  private vincular(esc: Escopo, alias: string, col: DefColecao, valor: unknown, indice: number, total: number, dados?: DadosEmpresa): Escopo {
     const novo: Escopo = { ...esc };
     const t = tipoItem(col.tipoItem);
     if (alias !== 'pessoa' && t?.pai === 'pessoa' && t.paraPai) {
-      novo.pessoa = { tipo: 'pessoa', valor: t.paraPai(valor), indice, total };
+      novo.pessoa = { tipo: 'pessoa', valor: t.paraPai(valor), indice, total, dados };
     }
     delete novo[alias];
-    novo[alias] = { tipo: col.tipoItem, valor, indice, total };
+    novo[alias] = { tipo: col.tipoItem, valor, indice, total, dados };
     return novo;
   }
 
-  private itensDaColecao(nome: string, linha: number): { col?: DefColecao; itens: unknown[] } {
+  private itensDaColecao(nome: string, linha: number): { col?: DefColecao; itens: unknown[]; dados?: DadosEmpresa } {
+    if (nome.startsWith(ANTERIOR)) {
+      const resto = this.semAnterior(nome, linha);
+      if (resto === null) return { itens: [] };
+      const r = this.comDados(this.ctx.dadosAntes, () => this.itensDaColecao(resto, linha));
+      return { ...r, dados: this.ctx.dadosAntes ?? undefined };
+    }
     const col = colecao(nome);
     if (!col) {
       this.erro(linha, `Lista desconhecida em [para cada]: "${nome}".`);
       return { itens: [] };
     }
-    return { col, itens: col.obter(this.ctx) };
+    return { col, itens: col.obter(this.ctx), dados: col.dadosAnteriores ? (this.ctx.dadosAntes ?? undefined) : undefined };
   }
 
   // ----- Inline -----
@@ -309,10 +412,10 @@ export class Avaliador {
           break;
         }
         case 'para': {
-          const { col, itens } = this.itensDaColecao(no.colecao, linha);
+          const { col, itens, dados } = this.itensDaColecao(no.colecao, linha);
           if (!col) break;
           itens.forEach((v, i) => {
-            const e2 = this.vincular(esc, no.item, col, v, i, itens.length);
+            const e2 = this.vincular(esc, no.item, col, v, i, itens.length, dados);
             r.push(...this.avaliarInline(no.corpo, e2, estado, linha));
             const suf = sufixo(no.opcoes, i, itens.length);
             if (suf) r.push({ texto: suf, negrito: estado.negrito });
@@ -341,10 +444,10 @@ export class Avaliador {
           break;
         }
         case 'para': {
-          const { col, itens } = this.itensDaColecao(no.colecao, no.linha);
+          const { col, itens, dados } = this.itensDaColecao(no.colecao, no.linha);
           if (!col) break;
           itens.forEach((v, i) => {
-            const sub = this.avaliarNos(no.corpo, this.vincular(esc, no.item, col, v, i, itens.length));
+            const sub = this.avaliarNos(no.corpo, this.vincular(esc, no.item, col, v, i, itens.length, dados));
             const suf = sufixo(no.opcoes, i, itens.length);
             if (suf) acrescentarAoFim(sub, suf);
             r.push(...sub);
@@ -373,10 +476,10 @@ export class Avaliador {
         const celulas: Trecho[][] = [];
         for (const cel of no.celulas) {
           if (cel.repetir) {
-            const { col, itens } = this.itensDaColecao(cel.repetir.colecao, no.linha);
+            const { col, itens, dados } = this.itensDaColecao(cel.repetir.colecao, no.linha);
             if (!col) continue;
             itens.forEach((v, i) => {
-              const e2 = this.vincular(esc, cel.repetir!.item, col, v, i, itens.length);
+              const e2 = this.vincular(esc, cel.repetir!.item, col, v, i, itens.length, dados);
               celulas.push(normalizarTrechos(this.avaliarInline(cel.conteudo, e2, { negrito: false }, no.linha)));
             });
           } else {
@@ -388,10 +491,10 @@ export class Avaliador {
         const ramo = no.ramos.find((rm) => rm.condicao === null || this.avaliarCondicao(rm.condicao, esc, no.linha));
         if (ramo) r.push(...this.avaliarLinhasTabela(ramo.corpo, esc));
       } else if (no.tipo === 'para') {
-        const { col, itens } = this.itensDaColecao(no.colecao, no.linha);
+        const { col, itens, dados } = this.itensDaColecao(no.colecao, no.linha);
         if (!col) continue;
         itens.forEach((v, i) => {
-          r.push(...this.avaliarLinhasTabela(no.corpo, this.vincular(esc, no.item, col, v, i, itens.length)));
+          r.push(...this.avaliarLinhasTabela(no.corpo, this.vincular(esc, no.item, col, v, i, itens.length, dados)));
         });
       }
     }

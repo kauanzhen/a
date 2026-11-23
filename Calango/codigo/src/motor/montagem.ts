@@ -37,8 +37,10 @@ export interface PendenciaDoc {
 export interface DocumentoMontado {
   elementos: ElementoDoc[];
   pendencias: PendenciaDoc[];
-  /** Cláusulas que entraram no documento, com a versão usada. */
-  usadas: { clausula_id: string; versao: number }[];
+  /** Cláusulas que entraram no documento, com a versão usada e a área. */
+  usadas: { clausula_id: string; versao: number; area: string }[];
+  /** Número dado a cada cláusula numerada, por área (para o contrato vigente). */
+  numeracao: { area: string; clausula_id: string; numero: number }[];
   /** Texto do título (para rodapé e nome do arquivo). */
   titulo: string;
 }
@@ -60,7 +62,8 @@ export function montarDocumento(p: ParametrosMontagem): DocumentoMontado {
   const av = new Avaliador({ ...p.contexto, buscarClausula: buscarConteudo, profundidade: 0 });
   const elementos: ElementoDoc[] = [];
   const pendencias: PendenciaDoc[] = [];
-  const usadas: { clausula_id: string; versao: number }[] = [];
+  const usadas: { clausula_id: string; versao: number; area: string }[] = [];
+  const numeracao: { area: string; clausula_id: string; numero: number }[] = [];
   let titulo = '';
 
   let numeroClausula = 0;
@@ -73,6 +76,12 @@ export function montarDocumento(p: ParametrosMontagem): DocumentoMontado {
 
   for (const area of p.definicao.areas) {
     const itens = (p.selecao[area.id] ?? []).filter((i) => i.ativa);
+    av.definirModoArea(area.modo);
+    // Cada área numerada recomeça em PRIMEIRA, salvo se "continua" a anterior.
+    if (area.numerada && area.numeracao !== 'continua') {
+      fecharClausula();
+      numeroClausula = 0;
+    }
     const daArea: ElementoDoc[] = [];
     for (const item of itens) {
       const completa = p.buscarClausula(item.clausula_id);
@@ -98,13 +107,14 @@ export function montarDocumento(p: ParametrosMontagem): DocumentoMontado {
       }
       for (const pe of res.pendencias) pendencias.push({ nivel: 'erro', clausula: nomeClausula, mensagem: pe.mensagem, campos: pe.campos });
       if (res.saida.length === 0) continue;
-      usadas.push({ clausula_id: completa.id, versao: c.versao });
+      usadas.push({ clausula_id: completa.id, versao: c.versao, area: area.id });
 
       const numerada = area.numerada && c.tipo_bloco === 'clausula';
       let prefixo: Trecho[] | null = null;
       if (numerada) {
         fecharClausula();
         numeroClausula++;
+        numeracao.push({ area: area.id, clausula_id: completa.id, numero: numeroClausula });
         paragrafosDaClausula = [];
         prefixo = [{ texto: `CLÁUSULA ${ordinalClausula(numeroClausula)}: `, negrito: true }];
       } else if (c.tipo_bloco === 'clausula' && !area.numerada) {
@@ -178,7 +188,8 @@ export function montarDocumento(p: ParametrosMontagem): DocumentoMontado {
   }
   fecharClausula();
 
-  return { elementos, pendencias: semRepetir(pendencias), usadas, titulo: titulo || p.definicao.nome };
+  av.definirModoArea(undefined);
+  return { elementos, pendencias: semRepetir(pendencias), usadas, numeracao, titulo: titulo || p.definicao.nome };
 }
 
 /** "Parágrafo Único:" quando há só um; senão "Parágrafo Primeiro:", "Segundo:"... */

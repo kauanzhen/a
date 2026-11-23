@@ -112,7 +112,7 @@ export function validarDados(d: DadosEmpresa, campos: Set<string>, op: OpcoesVal
     if (!rs) r.push(erro('empresa', 'empresa.razao_social', 'Informe a razão social da empresa.'));
     else {
       const fim = normalizar(rs).toUpperCase();
-      if (!op.tipo.sufixos_nome.some((s) => fim.endsWith(normalizar(s).toUpperCase())))
+      if (op.tipo.sufixos_nome.length && !op.tipo.sufixos_nome.some((s) => fim.endsWith(normalizar(s).toUpperCase())))
         r.push(aviso('empresa', 'empresa.razao_social', `A razão social normalmente termina com "${op.tipo.sufixos_nome[0]}". Confira.`));
     }
   }
