@@ -1,6 +1,6 @@
 # Calango — guia de uso
 
-O Calango monta contratos sociais de **sociedades limitadas (LTDA)** a partir dos dados da empresa. Você preenche os dados uma vez e o sistema escreve o documento com a concordância certa (sócio/sócia, declara/declaram), a numeração das cláusulas e os valores por extenso.
+O Calango monta contratos sociais, alterações contratuais com consolidação, distratos e transformações (empresário individual ↔ LTDA) a partir dos dados da empresa. Você preenche os dados uma vez e o sistema escreve o documento com a concordância certa (sócio/sócia, declara/declaram), a numeração das cláusulas e os valores por extenso.
 
 > **Lembrete:** o Calango não substitui a revisão. **Confira o documento antes de protocolar.**
 
@@ -13,7 +13,8 @@ O Calango monta contratos sociais de **sociedades limitadas (LTDA)** a partir do
 | `sistema/index.html` | **O programa.** É este arquivo que você abre. |
 | `modelos/` | Os modelos .docx do escritório que serviram de base. |
 | `LEIA-ME.md` | Este guia. |
-| `FASE-1.md` | O que foi feito nesta fase e os pontos que precisam da sua decisão. |
+| `FASE-1.md` | O que foi feito na Fase 1 (abertura) e os pontos que precisam da sua decisão. |
+| `FASES-2-3.md` | O que foi feito nas Fases 2 (alteração) e 3 (distrato e transformação). |
 | `ESPECIFICACAO_CALANGO.md` | A especificação completa do projeto. |
 | `codigo/` | O código-fonte (só para quem for dar manutenção). |
 
@@ -43,6 +44,8 @@ A **pasta de dados** é onde ficam as empresas, as cláusulas, as configuraçõe
 **Todos do escritório devem escolher a mesma pasta `dados`**, para trabalharem com os mesmos cadastros.
 
 ### Nas próximas vezes
+
+Quando uma nova versão do Calango traz cláusulas novas, elas são acrescentadas à biblioteca da pasta de dados automaticamente. Cláusulas que você editou nunca são alteradas.
 
 O Calango lembra a pasta. Por segurança, o Edge pode pedir sua confirmação: basta clicar em **Liberar acesso à pasta** e em **Permitir**.
 
@@ -79,17 +82,68 @@ Abra o documento e clique em **Marcar como registrado na Junta**. Informe a data
 
 ---
 
-## 5. Empresas
+## 5. Alteração contratual (com consolidação)
+
+1. Em **Empresas**, abra a empresa e clique em **Alteração contratual com consolidação** (ou use **Novo documento**).
+   - A empresa precisa ter **cadastro vigente**: a abertura marcada como registrada, ou a empresa cadastrada à mão.
+2. **Etapa 1:** o conjunto padrão já vem pronto:
+   - **Cláusulas de alteração.** Cada uma só aparece no documento se aquele dado mudou.
+   - **Ratificação.**
+   - **Consolidação.** Usa as cláusulas do contrato vigente.
+3. **Etapa 2:** os dados vêm preenchidos com o cadastro vigente. Mude **só o que a alteração deve mudar**:
+   - **Nome, endereço, objeto, CNAEs, enquadramento, administração:** é só editar os campos.
+   - **Capital e sócios:** use a **Movimentação de quotas**, na seção “Alteração”:
+     - **Aumento de capital:** quem subscreve e quantas quotas novas.
+     - **Cessão de quotas:** quem cede, quem recebe, quantas quotas e, se quiser, o preço.
+     - **Redução de capital:** de quem e quantas quotas; o sistema pede o motivo.
+     - **Para incluir um sócio novo**, escolha **“+ Pessoa nova”** em “quem recebe” ou “quem subscreve”. Os dados dele aparecem para preencher na seção “Sócios”.
+     - **Quem ceder todas as quotas sai da sociedade** (e assina o documento).
+     - A tabela **antes e depois** mostra o novo quadro e o novo capital.
+   - **Contrato vigente:** as cláusulas de alteração citam o número da cláusula ("prevista na Cláusula Segunda do contrato social").
+     - Se o contrato vigente foi feito pelo Calango, os números já vêm preenchidos.
+     - Para empresa antiga, confira no último contrato registrado.
+4. **Etapa 3:** confira o documento:
+   - título "**1ª ALTERAÇÃO CONTRATUAL...**";
+   - cláusulas de alteração numeradas a partir de PRIMEIRA, terminando na ratificação;
+   - a **consolidação**, com a numeração recomeçando em PRIMEIRA.
+5. Depois do registro, clique em **Marcar como registrado**. O cadastro vigente recebe os dados novos e a próxima alteração já sai como "2ª".
+
+> Só pode haver **um documento em andamento por empresa**. Para desistir de um rascunho, abra a empresa e clique em **Apagar** ao lado do documento.
+
+## 6. Distrato
+
+1. Na empresa, clique em **Distrato**.
+2. **Etapa 2**, seção “Distrato”:
+   - data de encerramento das atividades;
+   - resultado da liquidação: **sem bens e sem haveres**, ou **com partilha** (descreva a partilha);
+   - responsável pelo ativo e passivo supervenientes e responsável pela guarda dos livros (escolha entre os sócios).
+3. Gere o documento e, depois do registro, marque como registrado: a empresa fica **Extinta** e não aceita mais documentos.
+
+## 7. Transformação (Empresário Individual ↔ LTDA)
+
+- **LTDA unipessoal → Empresário Individual:** só para LTDA com um único sócio.
+  - Na Etapa 2, informe a nova firma (razão social) e mude o que mais for preciso (capital, endereço, CNAEs, enquadramento).
+  - O documento traz a transformação e, em seguida, o **Instrumento de Inscrição de Empresário Individual**.
+- **Empresário Individual → LTDA unipessoal:**
+  1. Cadastre o empresário em **Empresas → + Cadastrar empresário individual**: firma, CNPJ, NIRE, sede, objeto, CNAEs, capital e o titular.
+  2. Use **Transformação de Empresário Individual em LTDA unipessoal**. O titular vira sócio único com todas as quotas (ajuste o valor da quota se quiser).
+  3. O documento traz a transformação e o **contrato social completo** da nova LTDA.
+- Ao marcar como registrado, a empresa **muda de tipo** (EI ↔ LTDA).
+
+---
+
+## 8. Empresas
 
 Em **Empresas** você vê todas as empresas da pasta de dados:
 
 - **Em abertura:** os dados ainda estão no rascunho do contrato.
 - **Registrada:** tem cadastro vigente, que você pode consultar e corrigir.
-- **+ Cadastrar empresa já registrada:** para incluir empresas que já existem, deixando os dados prontos para as alterações contratuais (próxima fase).
+- **Extinta:** distrato registrado.
+- **+ Cadastrar LTDA já registrada** / **+ Cadastrar empresário individual:** para incluir empresas que já existem, deixando os dados prontos para alteração, distrato ou transformação.
 
 ---
 
-## 6. Biblioteca de cláusulas
+## 9. Biblioteca de cláusulas
 
 Em **Biblioteca de cláusulas** você pode criar, editar, duplicar e arquivar cláusulas.
 
@@ -107,7 +161,7 @@ Em **Biblioteca de cláusulas** você pode criar, editar, duplicar e arquivar cl
 
 ---
 
-## 7. Configurações
+## 10. Configurações
 
 - **Página:** margens, fonte, tamanho, espaçamento entre linhas.
 - **Cabeçalho:** texto e/ou imagem (PNG ou JPG).
@@ -120,7 +174,7 @@ Em **Biblioteca de cláusulas** você pode criar, editar, duplicar e arquivar cl
 
 ---
 
-## 8. Backup e segurança dos dados
+## 11. Backup e segurança dos dados
 
 - **Backup automático:** antes de gravar qualquer arquivo, o Calango guarda a versão anterior em `dados/backups/AAAA-MM-DD/`. Os backups com mais de **30 dias** são apagados automaticamente.
 - **Para recuperar um arquivo:**
@@ -137,7 +191,7 @@ Cada empresa é um arquivo separado. Se duas pessoas alterarem a mesma empresa a
 
 ---
 
-## 9. Problemas comuns
+## 12. Problemas comuns
 
 | O que aparece | O que fazer |
 |---|---|
@@ -147,3 +201,6 @@ Cada empresa é um arquivo separado. Se duas pessoas alterarem a mesma empresa a
 | "O arquivo ... foi alterado por outra pessoa" | Outra pessoa salvou a mesma empresa. Volte à lista, abra de novo e refaça sua alteração. |
 | "Não foi possível ler ... (arquivo corrompido?)" | Pegue a cópia mais recente em `dados/backups/`. |
 | O botão **Gerar .docx** está desligado | Há pendências em vermelho na Etapa 3. Resolva-as primeiro. |
+| "Já existe um documento em andamento para esta empresa" | Conclua (marque como registrado) ou apague o documento em andamento, na tela da empresa. |
+| "Nenhuma alteração foi feita" | Numa alteração, mude na Etapa 2 o que deve ser alterado (endereço, capital, sócios...). |
+| "Falta preencher: número da cláusula ... no contrato vigente" | Informe o número na seção “Alteração → Contrato vigente” da Etapa 2. |

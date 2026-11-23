@@ -8,6 +8,7 @@ import type { DefinicaoDocumento } from '../../tipos/definicoes';
 import { verificarRegras } from '../../motor/montagem';
 import { selecaoPadrao, type SituacaoEscolhida } from '../../servicos/atos';
 import { normalizar } from '../../lib/texto';
+import { documentosDaArea, documento as definicaoDocumento } from '../../tipos/registro';
 import { Alerta, Modal } from '../componentes/Campos';
 
 const TIPO: Record<string, string> = { clausula: 'Cláusula', paragrafo: 'Parágrafo', texto: 'Texto' };
@@ -24,12 +25,14 @@ function ModalAdicionar(p: {
   const [busca, setBusca] = useState('');
   const [tag, setTag] = useState('');
   const [soDoDocumento, setSoDoDocumento] = useState(true);
-  const todas = sessao.clausulas.map((l) => l.dados).filter((c) => !c.arquivada && c.tipo_societario.includes(p.tipoSocietario));
+  const tipos = [p.tipoSocietario, definicaoDocumento(p.def.id).tipo_depois].filter(Boolean) as string[];
+  const docsDaArea = documentosDaArea(p.def, p.area);
+  const todas = sessao.clausulas.map((l) => l.dados).filter((c) => !c.arquivada && c.tipo_societario.some((t) => tipos.includes(t)));
   const tags = [...new Set(todas.flatMap((c) => c.tags))].sort((a, b) => a.localeCompare(b));
   const q = normalizar(busca);
   const lista = todas
     .filter((c) => !p.jaUsadas.has(c.id))
-    .filter((c) => !soDoDocumento || c.documentos.includes(p.def.id))
+    .filter((c) => !soDoDocumento || c.documentos.some((d) => docsDaArea.includes(d)))
     .filter((c) => !tag || c.tags.includes(tag))
     .filter((c) => !q || normalizar(`${c.titulo_interno} ${c.titulo_secao} ${c.tags.join(' ')} ${c.corpo}`).includes(q))
     .sort((a, b) => a.titulo_interno.localeCompare(b.titulo_interno));
@@ -51,7 +54,7 @@ function ModalAdicionar(p: {
         </label>
         <label className="opcao" style={{ alignSelf: 'end' }}>
           <input type="checkbox" checked={soDoDocumento} onChange={(e) => setSoDoDocumento(e.target.checked)} />
-          Só as indicadas para “{p.def.nome}”
+          Só as indicadas para esta parte do documento
         </label>
       </div>
       <div className="lista-escolha" style={{ marginTop: '0.75rem' }}>
@@ -106,7 +109,13 @@ export function EtapaClausulas(p: {
 
   return (
     <div>
-      <div className="painel">
+      {def.empresa === 'existente' && (
+        <Alerta tipo="info">
+          O conjunto padrão já foi carregado a partir do contrato vigente da empresa. Na Etapa 2 você muda os dados; cada cláusula de alteração só aparece se aquele
+          dado mudou.
+        </Alerta>
+      )}
+      <div className="painel" style={{ display: def.empresa === 'nova' ? undefined : 'none' }}>
         <h2>Quantos sócios terá a empresa?</h2>
         <div className="cartoes-opcao">
           {(

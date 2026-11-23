@@ -3,9 +3,9 @@
 
 import { useMemo, useState } from 'react';
 import { mensagemDeErro, useApp } from '../contexto';
-import { nomeDaEmpresa, situacaoCadastro } from '../../servicos/atos';
+import { documentosPossiveis, nomeDaEmpresa, situacaoCadastro } from '../../servicos/atos';
+import { useComecarDocumento } from './TelaNovoDocumento';
 import { documento, tipoSocietario } from '../../tipos/registro';
-import { todosOsCampos } from '../../dados/campos';
 import { validarDados } from '../../dados/validacao';
 import { situacao } from '../../dados/quotas';
 import type { DadosEmpresa, Empresa } from '../../dados/tipos';
@@ -28,12 +28,9 @@ export function TelaEmpresa({ caminho }: { caminho: string }) {
   const [editando, setEditando] = useState(false);
   const [sujo, setSujo] = useState(false);
 
-  const campos = useMemo(() => {
-    const c = todosOsCampos();
-    c.delete('fechamento.local_data');
-    return c;
-  }, []);
   const tipo = empresa ? tipoSocietario(empresa.tipo_societario) : null;
+  const campos = useMemo(() => new Set(tipo?.campos_cadastro ?? []), [tipo]);
+  const comecar = useComecarDocumento();
   const pendencias = useMemo(() => (dados && tipo ? validarDados(dados, campos, { tipo }) : []), [dados, campos, tipo]);
 
   if (!empresa || !tipo) {
@@ -62,6 +59,22 @@ export function TelaEmpresa({ caminho }: { caminho: string }) {
       setEditando(false);
       app.avisar('ok', 'Cadastro da empresa salvo (a versão anterior foi guardada em backups/).');
       if (destino !== caminho) app.ir({ nome: 'empresa', caminho: destino });
+    } catch (e) {
+      app.avisar('erro', mensagemDeErro(e));
+    }
+  }
+
+  async function apagarAto(atoId: string) {
+    const ato = empresa!.atos.find((a) => a.id === atoId);
+    if (!ato || ato.status === 'registrado') return;
+    if (!window.confirm(`Apagar o documento “${documento(ato.tipo_documento).nome}” (${ato.status})?\n\nUma cópia do arquivo da empresa fica em backups/.`)) return;
+    try {
+      const nova: Empresa = { ...empresa!, atos: empresa!.atos.filter((a) => a.id !== atoId) };
+      const m = await app.sessao.repo.salvarEmpresa(nova, caminho, modificadoEm);
+      setEmpresa(nova);
+      setModificadoEm(m);
+      app.atualizarEmpresaLocal({ dados: nova, caminho, modificadoEm: m });
+      app.avisar('ok', 'Documento apagado.');
     } catch (e) {
       app.avisar('erro', mensagemDeErro(e));
     }
@@ -96,6 +109,30 @@ export function TelaEmpresa({ caminho }: { caminho: string }) {
         </button>
       </div>
 
+      {empresa.extinta_em && <Alerta tipo="aviso">Empresa extinta: distrato registrado em {formatarData(empresa.extinta_em)}.</Alerta>}
+
+      {!empresa.extinta_em && (
+        <div className="painel">
+          <h2>Novo documento para esta empresa</h2>
+          <div className="grade" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))' }}>
+            {documentosPossiveis(empresa).map(({ def, motivo }) => (
+              <div key={def.id}>
+                <button
+                  className="primario"
+                  style={{ width: '100%' }}
+                  disabled={!!motivo || sujo}
+                  title={motivo}
+                  onClick={() => lida && comecar({ dados: empresa, caminho, modificadoEm: modificadoEm ?? 0 }, def)}
+                >
+                  {def.nome}
+                </button>
+                {motivo && <div className="suave pequeno">{motivo}</div>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="painel">
         <h2>Atos (documentos)</h2>
         {empresa.atos.length === 0 ? (
@@ -120,10 +157,15 @@ export function TelaEmpresa({ caminho }: { caminho: string }) {
                   </td>
                   <td>{a.gerado_em ? formatarData(a.gerado_em.slice(0, 10)) : '—'}</td>
                   <td>{a.registro ? `${formatarData(a.registro.data)}${a.registro.numero ? ` — nº ${a.registro.numero}` : ''}` : '—'}</td>
-                  <td>
+                  <td style={{ whiteSpace: 'nowrap' }}>
                     <button className="pequeno" onClick={() => app.ir({ nome: 'assistente', caminho, atoId: a.id })}>
                       {a.status === 'registrado' ? 'Ver' : 'Abrir'}
-                    </button>
+                    </button>{' '}
+                    {a.status !== 'registrado' && (
+                      <button className="pequeno perigo" onClick={() => apagarAto(a.id)}>
+                        Apagar
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -177,6 +219,7 @@ export function TelaEmpresa({ caminho }: { caminho: string }) {
                 }}
                 campos={campos}
                 pendencias={pendencias}
+                tipo={tipo}
               />
             </>
           ) : (

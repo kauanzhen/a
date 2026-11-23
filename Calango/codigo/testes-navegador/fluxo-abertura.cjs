@@ -2,7 +2,9 @@
 // Simula o uso real: abre direto do disco (file://), escolhe a pasta de dados
 // (no teste, uma pasta interna do navegador), importa uma empresa, gera o
 // contrato de 2 sócios, preenche uma abertura unipessoal pela tela, edita uma
-// cláusula, salva configurações e exporta.
+// cláusula, salva configurações, exporta e, nas Fases 2 e 3, faz uma alteração
+// com consolidação (endereço, aumento, cessão para sócia nova), um distrato e
+// uma transformação de LTDA em empresário individual.
 //
 // Uso:  npm run test:navegador
 // Os .docx gerados e as capturas de tela ficam em <pasta temporária>/calango-teste-navegador.
@@ -19,6 +21,38 @@ const S = SAIDA;
 const PORTA = 8765;
 const URL = `http://localhost:${PORTA}/index.html`;
 const passo = (m) => console.log('✔', m);
+const JSZip = require('jszip');
+async function textoDocx(caminho) {
+  const zip = await JSZip.loadAsync(fs.readFileSync(caminho));
+  const xml = await zip.file('word/document.xml').async('string');
+  return xml.replace(/<\/w:p>/g, '\n').replace(/<[^>]+>/g, '').replace(/&amp;/g, '&');
+}
+async function esperarSemPendencias(page) {
+  try {
+    await page.getByText('Nenhuma pendência').waitFor({ timeout: 15000 });
+  } catch (e) {
+    const txt = (await page.locator('.alerta').allInnerTexts().catch(() => [])).join('\n');
+    throw new Error('Ainda há pendências na Etapa 3:\n' + txt);
+  }
+}
+async function preencherPessoa(c, d) {
+  await c.getByLabel(/^Nome completo/).fill(d.nome);
+  await c.getByText(d.genero, { exact: true }).click();
+  await c.getByLabel(/Naturalidade — cidade/).fill(d.cidadeNat);
+  await c.getByLabel(/Naturalidade — UF/).selectOption('SP');
+  await c.getByLabel(/Data de nascimento/).fill(d.nascimento);
+  await c.getByLabel(/^Estado civil/).selectOption('solteiro');
+  await c.getByLabel(/^Profissão/).fill(d.profissao);
+  await c.getByLabel(/RG — número/).fill(d.rg);
+  await c.getByLabel(/RG — UF/).selectOption('SP');
+  await c.getByLabel(/^CPF/).fill(d.cpf);
+  await c.getByLabel(/^Logradouro/).fill('Rua Itapeva');
+  await c.getByLabel(/^Número/).fill('77');
+  await c.getByLabel(/^Bairro/).fill('Bela Vista');
+  await c.getByLabel(/^Cidade/).fill('São Paulo');
+  await c.getByLabel(/^UF/).selectOption('SP');
+  await c.getByLabel(/^CEP/).fill('01332000');
+}
 
 const servidor = http
   .createServer((req, res) => {
@@ -100,7 +134,7 @@ async function abrirNavegador() {
 
   // --- nova abertura unipessoal, preenchendo tudo pela tela ---
   await page.getByRole('button', { name: /Novo documento/ }).first().click();
-  await page.getByRole('button', { name: 'Começar' }).click();
+  await page.locator('.painel', { hasText: 'Contrato social de abertura' }).getByRole('button', { name: 'Começar' }).click();
   await page.getByText('Quantos sócios terá a empresa?').waitFor();
   await page.getByText('Um sócio só').click();
   await page.getByRole('button', { name: /Próxima etapa/ }).click();
@@ -237,8 +271,132 @@ async function abrirNavegador() {
   const pacote = JSON.parse(fs.readFileSync(caminhoJson, 'utf8'));
   passo(`exportou tudo: ${pacote.empresas.length} empresas, ${pacote.clausulas.length} cláusulas`);
 
-  // --- empresas ---
+  // ---------- FASE 2: alteração contratual da empresa registrada ----------
   await page.getByRole('button', { name: /Empresas/ }).first().click();
+  await page.locator('tr', { hasText: 'EXEMPLO COMÉRCIO E SERVIÇOS LTDA' }).getByRole('button', { name: 'Abrir' }).click();
+  await page.getByRole('button', { name: 'Alteração contratual com consolidação' }).click();
+  await page.getByRole('tab', { name: /1\. Cláusulas/ }).waitFor();
+  await page.screenshot({ path: `${S}/e2e/12-alteracao-etapa1.png`, fullPage: true });
+  await page.getByRole('button', { name: /Próxima etapa/ }).click();
+  const empAlt = page.locator('#secao-empresa');
+  await empAlt.getByLabel(/^Logradouro/).fill('Avenida Sebastião Davino dos Reis');
+  await empAlt.getByLabel(/^Número/).fill('672');
+  await empAlt.getByLabel(/^CNPJ/).fill('11.222.333/0001-81');
+  const alt = page.locator('#secao-alteracao');
+  await alt.getByLabel('Tipo de movimento').selectOption('aumento');
+  await alt.getByRole('button', { name: '+ Adicionar movimento' }).click();
+  await alt.getByLabel(/^Quem subscreve/).selectOption({ label: 'JOÃO DA SILVA PEREIRA' });
+  await alt.getByLabel('Quantidade de quotas do movimento 1').fill('2000');
+  await alt.getByText('R$ 12.500,00').waitFor();
+  passo('alteração: aumento de capital recalcula o novo capital');
+  await alt.getByLabel('Tipo de movimento').selectOption('cessao');
+  await alt.getByRole('button', { name: '+ Adicionar movimento' }).click();
+  await alt.getByLabel(/^Quem cede/).selectOption({ label: 'MARIA APARECIDA SOUZA' });
+  await alt.getByLabel(/^Quem recebe/).selectOption({ label: '+ Pessoa nova (sócio que entra)' });
+  await alt.getByLabel('Quantidade de quotas do movimento 2').fill('1000');
+  await alt.locator('.etiqueta', { hasText: 'entra' }).waitFor();
+  passo('alteração: cessão para pessoa nova (entra na sociedade)');
+  const socAlt = page.locator('#secao-socios');
+  const novaCard = socAlt.locator('.cartao-pessoa').last();
+  await novaCard.locator('.cabeca').click();
+  await preencherPessoa(novaCard, { nome: 'Beatriz Ramos Costa', genero: 'Feminino', cidadeNat: 'Barueri', nascimento: '1992-04-10', profissao: 'designer', rg: '55.666.777-8', cpf: '39053344705' });
+  await page.getByText('Todos os dados exigidos pelas cláusulas escolhidas estão preenchidos.').waitFor();
+  passo('alteração: Etapa 2 completa (dados da nova sócia preenchidos)');
+  await page.screenshot({ path: `${S}/e2e/13-alteracao-etapa2.png`, fullPage: true });
+  await page.getByRole('button', { name: /Próxima etapa/ }).click();
+  await esperarSemPendencias(page);
+  await page.screenshot({ path: `${S}/e2e/14-alteracao-revisao.png`, fullPage: true });
+  [dl] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: /Gerar \.docx/ }).click()]);
+  const arqAlt = `${S}/e2e/${dl.suggestedFilename()}`;
+  await dl.saveAs(arqAlt);
+  const tAlt = await textoDocx(arqAlt);
+  for (const trecho of [
+    '1ª ALTERAÇÃO CONTRATUAL DA SOCIEDADE EXEMPLO COMÉRCIO E SERVIÇOS LTDA',
+    'previsto na Cláusula Segunda do contrato social',
+    'é aumentado de R$ 10.500,00 (dez mil e quinhentos reais) para R$ 12.500,00 (doze mil e quinhentos reais)',
+    'cede e transfere, neste ato, 1.000 (mil) quotas',
+    'à sócia ingressante BEATRIZ RAMOS COSTA',
+    'Ingressa na sociedade, neste ato, a sócia BEATRIZ RAMOS COSTA',
+    'CONSOLIDAÇÃO DO CONTRATO SOCIAL',
+    'resolvem consolidar o contrato social',
+  ]) {
+    if (!tAlt.includes(trecho)) throw new Error('Trecho não encontrado na alteração: ' + trecho);
+  }
+  if (/\((a|as|o|os)\)/.test(tAlt)) throw new Error('A alteração tem "(a)"');
+  passo(`gerou .docx da alteração com consolidação: ${dl.suggestedFilename()}`);
+  await page.getByRole('button', { name: /Marcar como registrado/ }).click();
+  await page.getByRole('button', { name: 'Confirmar registro' }).click();
+  await page.getByText(/já foi registrado/).waitFor();
+  passo('alteração registrada (cadastro vigente atualizado)');
+
+  // ---------- FASE 3: distrato ----------
+  await page.getByRole('button', { name: /Empresas/ }).first().click();
+  await page.locator('tr', { hasText: 'EXEMPLO COMÉRCIO E SERVIÇOS LTDA' }).getByRole('button', { name: 'Abrir' }).click();
+  await page.getByText('Avenida Sebastião Davino dos Reis').waitFor();
+  passo('cadastro vigente mostra o endereço novo depois do registro');
+  await page.getByRole('button', { name: 'Distrato' }).click();
+  await page.getByRole('button', { name: /Próxima etapa/ }).click();
+  const dis = page.locator('#secao-distrato');
+  await dis.getByLabel(/Data de encerramento/).fill('2026-12-15');
+  await dis.getByLabel(/Responsável pelo ativo e passivo/).selectOption({ label: 'JOÃO DA SILVA PEREIRA' });
+  await dis.getByLabel(/Responsável pela guarda dos livros/).selectOption({ label: 'BEATRIZ RAMOS COSTA' });
+  await page.getByText('Todos os dados exigidos pelas cláusulas escolhidas estão preenchidos.').waitFor();
+  await page.getByRole('button', { name: /Próxima etapa/ }).click();
+  await esperarSemPendencias(page);
+  [dl] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: /Gerar \.docx/ }).click()]);
+  const arqDis = `${S}/e2e/${dl.suggestedFilename()}`;
+  await dl.saveAs(arqDis);
+  const tDis = await textoDocx(arqDis);
+  for (const trecho of ['DISTRATO DE SOCIEDADE LIMITADA', 'Únicos sócios da sociedade limitada', 'CLÁUSULA SEXTA:', 'fica a cargo do ex-sócio JOÃO DA SILVA PEREIRA', 'A sócia BEATRIZ RAMOS COSTA']) {
+    if (!tDis.includes(trecho)) throw new Error('Trecho não encontrado no distrato: ' + trecho);
+  }
+  passo(`gerou .docx do distrato: ${dl.suggestedFilename()}`);
+  await page.getByRole('button', { name: /Marcar como registrado/ }).click();
+  await page.getByRole('button', { name: 'Confirmar registro' }).click();
+  await page.getByText(/já foi registrado/).waitFor();
+  await page.getByRole('button', { name: /Empresas/ }).first().click();
+  await page.locator('tr', { hasText: 'EXEMPLO COMÉRCIO E SERVIÇOS LTDA' }).getByText('Extinta').waitFor();
+  passo('distrato registrado: empresa marcada como extinta');
+
+  // ---------- FASE 3: transformação de LTDA unipessoal em empresário individual ----------
+  await page.locator('tr', { hasText: 'PADARIA DONA ROSA LTDA' }).getByRole('button', { name: 'Abrir' }).click();
+  await page.getByRole('button', { name: 'Abrir', exact: true }).first().click();
+  await page.getByRole('button', { name: /Marcar como registrado/ }).click();
+  await page.getByLabel(/^CNPJ/).fill('11.444.777/0001-61');
+  await page.getByRole('button', { name: 'Confirmar registro' }).click();
+  await page.getByText(/já foi registrado/).waitFor();
+  await page.getByRole('button', { name: /Empresas/ }).first().click();
+  await page.locator('tr', { hasText: 'PADARIA DONA ROSA LTDA' }).getByRole('button', { name: 'Abrir' }).click();
+  await page.getByRole('button', { name: 'Transformação de LTDA em Empresário Individual' }).click();
+  await page.getByRole('button', { name: /Próxima etapa/ }).click();
+  await page.locator('#secao-empresa').getByLabel(/^Razão social/).fill('ROSA MARIA DOS SANTOS');
+  await page.locator('#secao-empresa').getByLabel(/^NIRE/).fill('35212345679');
+  await page.locator('#secao-socios h2', { hasText: 'Titular' }).waitFor();
+  await page.screenshot({ path: `${S}/e2e/15-transformacao-etapa2.png`, fullPage: true });
+  await page.getByRole('button', { name: /Próxima etapa/ }).click();
+  await esperarSemPendencias(page);
+  [dl] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: /Gerar \.docx/ }).click()]);
+  const arqTr = `${S}/e2e/${dl.suggestedFilename()}`;
+  await dl.saveAs(arqTr);
+  const tTr = await textoDocx(arqTr);
+  for (const trecho of [
+    'ALTERAÇÃO POR TRANSFORMAÇÃO DE SOCIEDADE EMPRESÁRIA LIMITADA EM EMPRESÁRIO INDIVIDUAL',
+    'única sócia da sociedade PADARIA DONA ROSA LTDA',
+    'O Empresário Individual adotará o nome empresarial ROSA MARIA DOS SANTOS.',
+    'INSTRUMENTO DE INSCRIÇÃO DE EMPRESÁRIO INDIVIDUAL',
+    'O capital é de R$ 10.000,00 (dez mil reais), totalmente integralizado',
+  ]) {
+    if (!tTr.includes(trecho)) throw new Error('Trecho não encontrado na transformação: ' + trecho);
+  }
+  passo(`gerou .docx da transformação LTDA → EI: ${dl.suggestedFilename()}`);
+  await page.getByRole('button', { name: /Marcar como registrado/ }).click();
+  await page.getByRole('button', { name: 'Confirmar registro' }).click();
+  await page.getByText(/agora é Empresário Individual/).waitFor();
+  await page.getByRole('button', { name: /Empresas/ }).first().click();
+  await page.locator('tr', { hasText: 'ROSA MARIA DOS SANTOS' }).getByText('EI', { exact: true }).waitFor();
+  passo('transformação registrada: a empresa passou a ser Empresário Individual');
+
+  // --- empresas ---
   await page.screenshot({ path: `${S}/e2e/11-empresas.png`, fullPage: true });
 
   // --- estrutura da pasta de dados ---

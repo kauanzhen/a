@@ -2,13 +2,16 @@
 // exigidos pelas cláusulas escolhidas), sem repetir, agrupados em seções.
 
 import { useRef, useState } from 'react';
-import type { DadosEmpresa, OpcoesAto, Pessoa } from '../../dados/tipos';
+import type { Ato, DadosEmpresa, OpcoesAto, Pessoa } from '../../dados/tipos';
+import type { DefinicaoTipoSocietario } from '../../tipos/definicoes';
+import { capitalizar } from '../../lib/texto';
+import { CampoMotivoReducao, EditorMovimentos, ResumoCapitalAlteracao, SecaoDistrato, SecaoNumeracao } from './SecoesAto';
 import { SECOES } from '../../dados/campos';
 import type { Pendencia } from '../../dados/validacao';
 import { novaPessoa } from '../../dados/fabricas';
 import { socios } from '../../dados/quotas';
 import { cnaeValido, formatarCNAE, formatarCNPJ } from '../../dados/documentos';
-import { Alerta, CampoAreaTexto, CampoData, CampoMarcar, CampoNumero, CampoSelecao, CampoTexto, CampoUF, CamposEndereco, OpcoesRadio, Rotulo } from './Campos';
+import { Alerta, CampoAreaTexto, CampoData, CampoMarcar, CampoMoeda, CampoNumero, CampoSelecao, CampoTexto, CampoUF, CamposEndereco, OpcoesRadio, Rotulo } from './Campos';
 import { PessoaForm } from './PessoaForm';
 import { EditorQuotas } from './EditorQuotas';
 
@@ -20,6 +23,10 @@ interface Props {
   opcoesAto?: OpcoesAto;
   /** Recebe só a parte alterada das opções do ato. */
   onChangeOpcoes?: (parcial: Partial<OpcoesAto>) => void;
+  /** Tipo societário (rótulos: sócio/titular; limite de membros). */
+  tipo?: DefinicaoTipoSocietario;
+  /** Dados próprios do ato (movimentação de quotas, numeração do contrato vigente, distrato). */
+  ato?: { valor: Ato; alterar: (fn: (a: Ato) => Ato) => void; citadas: string[]; titulo: (id: string) => string };
 }
 
 function mmddParaBR(mmdd: string) {
@@ -66,7 +73,11 @@ function CartaoPessoa(p: {
   );
 }
 
-export function FormularioDados({ dados: d, onChange, campos, pendencias, opcoesAto, onChangeOpcoes }: Props) {
+export function FormularioDados({ dados: d, onChange, campos, pendencias, opcoesAto, onChangeOpcoes, tipo, ato }: Props) {
+  // Numa alteração, o quadro de sócios e o capital vêm da movimentação de quotas.
+  const quadroPorMovimentos = campos.has('alteracao.quotas') && !!ato?.valor.dados_antes;
+  const membro = tipo?.vocabulario.membro ?? ['sócio', 'sócia', 'sócios', 'sócias'];
+  const maxMembros = tipo?.max_membros;
   const [abertos, setAbertos] = useState<Set<string>>(() => new Set(d.pessoas.length <= 1 ? d.pessoas.map((p) => p.id) : []));
   const tem = (c: string) => campos.has(c);
   // Valor mais recente (inclui mudanças ainda não redesenhadas), para que duas
@@ -93,6 +104,7 @@ export function FormularioDados({ dados: d, onChange, campos, pendencias, opcoes
   const secoesVisiveis = SECOES.filter((s) => {
     if (s.id === 'socios') return tem('socios') || camposPessoa.size > 0;
     if (s.id === 'fechamento') return tem('fechamento.foro') || tem('fechamento.exercicio') || (tem('fechamento.local_data') && !!opcoesAto);
+    if (s.id === 'alteracao' || s.id === 'distrato') return !!ato && [...campos].some((c) => c.startsWith(`${s.id}.`));
     const prefixo = s.id === 'empresa' ? 'empresa.' : `${s.id}.`;
     return [...campos].some((c) => c.startsWith(prefixo));
   });
@@ -135,7 +147,7 @@ export function FormularioDados({ dados: d, onChange, campos, pendencias, opcoes
         return (
           <section key={s.id} className="painel" id={`secao-${s.id}`}>
             <div className="entre">
-              <h2>{s.nome}</h2>
+              <h2>{s.id === 'socios' ? capitalizar(maxMembros === 1 ? membro[0] : membro[2]) : s.nome}</h2>
               {qtdErros > 0 ? <span className="etiqueta vermelha">{qtdErros} pendência(s)</span> : <span className="etiqueta verde">ok</span>}
             </div>
 
@@ -296,27 +308,39 @@ export function FormularioDados({ dados: d, onChange, campos, pendencias, opcoes
                   <CartaoPessoa
                     key={pessoa.id}
                     pessoa={pessoa}
-                    titulo={`Sócio ${i + 1}`}
+                    titulo={`${capitalizar(membro[0])} ${i + 1}`}
                     aberto={abertos.has(pessoa.id)}
                     alternar={() => alternar(pessoa.id)}
                     onChange={atualizarPessoa(pessoa.id)}
-                    onRemover={() => removerPessoa(pessoa.id, pessoa.nome)}
+                    onRemover={quadroPorMovimentos ? undefined : () => removerPessoa(pessoa.id, pessoa.nome)}
                     campos={camposPessoa}
                     erro={(c) => erro(c, pessoa.id)}
                     qtdErros={pendencias.filter((p) => p.pessoaId === pessoa.id && p.nivel === 'erro').length}
                   />
                 ))}
-                <button className="primario" onClick={adicionarSocio}>
-                  + Adicionar sócio
-                </button>
+                {quadroPorMovimentos ? (
+                  <p className="suave pequeno">
+                    Para incluir ou retirar sócios, use a movimentação de quotas (seção “Alteração”). Aqui você completa ou corrige os dados das pessoas.
+                  </p>
+                ) : (
+                  <button className="primario" onClick={adicionarSocio} disabled={!!maxMembros && listaSocios.length >= maxMembros}>
+                    + Adicionar {membro[0]}
+                  </button>
+                )}
                 {erro('socios') && <div className="erro-campo">{erro('socios')}</div>}
               </>
             )}
 
             {s.id === 'capital' && (
               <>
-                {tem('capital.quotas') && (
+                {tem('capital.quotas') && quadroPorMovimentos && <ResumoCapitalAlteracao d={d} />}
+                {tem('capital.quotas') && !quadroPorMovimentos && (
                   <EditorQuotas dados={d} onChange={mudar} erros={pend.filter((p) => p.campo === 'capital.quotas' && p.nivel === 'erro').map((p) => p.mensagem)} />
+                )}
+                {tem('capital.valor') && !tem('capital.quotas') && (
+                  <div style={{ maxWidth: 320 }}>
+                    <CampoMoeda rotulo="Capital" valor={d.capital.valor_centavos} onChange={(v) => mudar({ capital: { ...atual.current.capital, valor_centavos: v } })} />
+                  </div>
                 )}
                 {tem('capital.integralizacao') && (
                   <>
@@ -415,6 +439,26 @@ export function FormularioDados({ dados: d, onChange, campos, pendencias, opcoes
                 )}
               </>
             )}
+
+            {s.id === 'alteracao' && ato && (
+              <>
+                {tem('alteracao.quotas') && ato.valor.dados_antes && (
+                  <>
+                    <h3>Movimentação de quotas</h3>
+                    <EditorMovimentos ato={ato.valor} alterar={ato.alterar} erros={pend.filter((p) => p.campo === 'alteracao.quotas' && p.nivel === 'erro').map((p) => p.mensagem)} />
+                  </>
+                )}
+                {tem('alteracao.motivo_reducao') && <CampoMotivoReducao ato={ato.valor} alterar={ato.alterar} erro={erro('alteracao.motivo_reducao')} />}
+                {tem('alteracao.numeracao') && ato.citadas.length > 0 && (
+                  <>
+                    <h3>Contrato vigente</h3>
+                    <SecaoNumeracao ato={ato.valor} alterar={ato.alterar} citadas={ato.citadas} titulo={ato.titulo} />
+                  </>
+                )}
+              </>
+            )}
+
+            {s.id === 'distrato' && ato && <SecaoDistrato ato={ato.valor} alterar={ato.alterar} campos={campos} erro={(c) => erro(c)} />}
 
             {s.id === 'fechamento' && (
               <div className="grade">

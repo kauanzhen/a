@@ -382,7 +382,7 @@ const DEFINICOES: Def[] = [
     documentos: ALT,
     natureza: 'fixa',
     regras: { obrigatoria: true },
-    corpo: ['{{empresa.numero_alteracao}} ALTERAÇÃO CONTRATUAL DA SOCIEDADE {{anterior.empresa.razao_social}}', 'CNPJ {{anterior.empresa.cnpj}} — NIRE {{anterior.empresa.nire}}'],
+    corpo: ['{{anterior.empresa.numero_alteracao}} ALTERAÇÃO CONTRATUAL DA SOCIEDADE {{anterior.empresa.razao_social}}', 'CNPJ {{empresa.cnpj}} — NIRE {{empresa.nire}}'],
   },
   {
     id: 'preambulo-alteracao',
@@ -399,7 +399,7 @@ const DEFINICOES: Def[] = [
       '[para cada socio em socios_ingressantes separador=";" ultimo=" e" final="."]',
       '{Sr.|Sra. : socio} {{socio.qualificacao}}',
       '[fim]',
-      '{Único sócio|Única sócia|Únicos sócios|Únicas sócias : anterior.socios} da sociedade {{anterior.empresa.razao_social}}, com sede {{anterior.sede.no_endereco}}, com seu contrato social arquivado na {{anterior.empresa.junta_comercial}} sob o NIRE nº {{anterior.empresa.nire}}[se anterior.empresa.data_registro], em {{anterior.empresa.data_registro}}[fim], e inscrita no CNPJ sob o nº {{anterior.empresa.cnpj}}, {resolve|resolve|resolvem|resolvem : anterior.socios}[se entrou_socio], com o ingresso {do sócio|da sócia|dos sócios|das sócias : socios_ingressantes} {{socios_ingressantes.nomes}}, acima {qualificado|qualificada|qualificados|qualificadas : socios_ingressantes},[fim] na melhor forma de direito, efetivar a presente alteração contratual, mediante as cláusulas e condições seguintes:',
+      '{Único sócio|Única sócia|Únicos sócios|Únicas sócias : anterior.socios} da sociedade {{anterior.empresa.razao_social}}, com sede {{anterior.sede.no_endereco}}, com seu contrato social arquivado na {{anterior.empresa.junta_comercial}} sob o NIRE nº {{empresa.nire}}[se empresa.data_registro], em {{empresa.data_registro}}[fim], e inscrita no CNPJ sob o nº {{empresa.cnpj}}, {resolve|resolve|resolvem|resolvem : anterior.socios}[se entrou_socio], com o ingresso {do sócio|da sócia|dos sócios|das sócias : socios_ingressantes} {{socios_ingressantes.nomes}}, acima {qualificado|qualificada|qualificados|qualificadas : socios_ingressantes},[fim] na melhor forma de direito, efetivar a presente alteração contratual, mediante as cláusulas e condições seguintes:',
     ],
     observacoes: 'O "Únicos (as) titulares" do modelo (termo de empresário individual) virou "Únicos sócios", com concordância.',
   },
@@ -809,7 +809,7 @@ const DEFINICOES: Def[] = [
     tipos: LTDA_EI,
     natureza: 'fixa',
     regras: { obrigatoria: true },
-    corpo: ['ALTERAÇÃO POR TRANSFORMAÇÃO DE SOCIEDADE EMPRESÁRIA LIMITADA EM EMPRESÁRIO INDIVIDUAL', '{{anterior.empresa.razao_social}} — CNPJ {{anterior.empresa.cnpj}}'],
+    corpo: ['ALTERAÇÃO POR TRANSFORMAÇÃO DE SOCIEDADE EMPRESÁRIA LIMITADA EM EMPRESÁRIO INDIVIDUAL', '{{anterior.empresa.razao_social}} — CNPJ {{empresa.cnpj}}'],
   },
   {
     id: 'preambulo-transf-ltda-ei',
@@ -821,7 +821,7 @@ const DEFINICOES: Def[] = [
     natureza: 'fixa',
     regras: { obrigatoria: true },
     corpo: [
-      '[para cada socio em anterior.socios]{Sr.|Sra. : socio} {{socio.qualificacao}}, {único sócio|única sócia : socio} da sociedade {{anterior.empresa.razao_social}}, estabelecida {{anterior.sede.no_endereco}}, inscrita na {{anterior.empresa.junta_comercial}} sob o NIRE nº {{anterior.empresa.nire}} e no CNPJ sob o nº {{anterior.empresa.cnpj}}, ora transforma seu registro de SOCIEDADE EMPRESÁRIA LIMITADA, passando a constituir o tipo jurídico EMPRESÁRIO INDIVIDUAL, nos termos da legislação aplicável, que se regerá pelas cláusulas e condições a seguir:[fim]',
+      '[para cada socio em anterior.socios]{Sr.|Sra. : socio} {{socio.qualificacao}}, {único sócio|única sócia : socio} da sociedade {{anterior.empresa.razao_social}}, estabelecida {{anterior.sede.no_endereco}}, inscrita na {{anterior.empresa.junta_comercial}} sob o NIRE nº {{empresa.nire}} e no CNPJ sob o nº {{empresa.cnpj}}, ora transforma seu registro de SOCIEDADE EMPRESÁRIA LIMITADA, passando a constituir o tipo jurídico EMPRESÁRIO INDIVIDUAL, nos termos da legislação aplicável, que se regerá pelas cláusulas e condições a seguir:[fim]',
     ],
     observacoes: 'No modelo constava "titular da empresa" para quem ainda é sócio da LTDA; corrigido para "único sócio da sociedade".',
   },
@@ -976,7 +976,7 @@ const DEFINICOES: Def[] = [
     tipos: LTDA_EI,
     natureza: 'fixa',
     regras: { obrigatoria: true },
-    corpo: ['CONTRATO SOCIAL POR TRANSFORMAÇÃO DE EMPRESÁRIO INDIVIDUAL', '{{anterior.empresa.razao_social}} — CNPJ {{anterior.empresa.cnpj}}'],
+    corpo: ['CONTRATO SOCIAL POR TRANSFORMAÇÃO DE EMPRESÁRIO INDIVIDUAL', '{{anterior.empresa.razao_social}} — CNPJ {{empresa.cnpj}}'],
   },
   {
     id: 'preambulo-transf-ei-ltda',
@@ -988,7 +988,7 @@ const DEFINICOES: Def[] = [
     natureza: 'fixa',
     regras: { obrigatoria: true },
     corpo: [
-      '[para cada socio em anterior.socios]{Sr.|Sra. : socio} {{socio.qualificacao}}, {titular|titular : socio} da empresa {{anterior.empresa.razao_social}}, estabelecida {{anterior.sede.no_endereco}}, inscrita na {{anterior.empresa.junta_comercial}} sob o NIRE nº {{anterior.empresa.nire}} e no CNPJ sob o nº {{anterior.empresa.cnpj}}, fazendo uso do que permite o § 3º do art. 968 da Lei nº 10.406/2002, com a redação alterada pelo art. 10 da Lei Complementar nº 128/2008, ora transforma seu registro de EMPRESÁRIO em SOCIEDADE LIMITADA UNIPESSOAL, passando a constituir o tipo jurídico SOCIEDADE LIMITADA, nos termos da legislação aplicável, que se regerá pelas cláusulas e condições a seguir:[fim]',
+      '[para cada socio em anterior.socios]{Sr.|Sra. : socio} {{socio.qualificacao}}, {titular|titular : socio} da empresa {{anterior.empresa.razao_social}}, estabelecida {{anterior.sede.no_endereco}}, inscrita na {{anterior.empresa.junta_comercial}} sob o NIRE nº {{empresa.nire}} e no CNPJ sob o nº {{empresa.cnpj}}, fazendo uso do que permite o § 3º do art. 968 da Lei nº 10.406/2002, com a redação alterada pelo art. 10 da Lei Complementar nº 128/2008, ora transforma seu registro de EMPRESÁRIO em SOCIEDADE LIMITADA UNIPESSOAL, passando a constituir o tipo jurídico SOCIEDADE LIMITADA, nos termos da legislação aplicável, que se regerá pelas cláusulas e condições a seguir:[fim]',
     ],
   },
   {

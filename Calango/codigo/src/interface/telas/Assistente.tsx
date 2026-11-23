@@ -2,10 +2,10 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { mensagemDeErro, useApp } from '../contexto';
-import { documento, tipoSocietario } from '../../tipos/registro';
+import { documento } from '../../tipos/registro';
 import type { Ato, Empresa } from '../../dados/tipos';
-import { camposDoAto, comAto, marcarGerado, marcarRegistrado, nomeDaEmpresa, revisarAto, temErros, voltarParaRascunho } from '../../servicos/atos';
-import { validarDados } from '../../dados/validacao';
+import { camposDoAto, comAto, corposDoAto, marcarGerado, marcarRegistrado, nomeDaEmpresa, revisarAto, temErros, tipoParaAto, validarAto, voltarParaRascunho } from '../../servicos/atos';
+import { clausulasCitadas } from '../../motor/campos';
 import { gerarDocxBlob, nomeArquivoDocx } from '../../docx/gerarDocx';
 import { carregarImagemCabecalho, urlDaImagem } from '../imagens';
 import type { ImagemCabecalho } from '../../docx/gerarDocx';
@@ -51,12 +51,12 @@ export function Assistente(p: { caminho: string; atoId: string }) {
   }, [sessao.repo, cfg.cabecalho.imagem]);
 
   const def = ato ? documento(ato.tipo_documento) : null;
-  const tipo = empresa ? tipoSocietario(empresa.tipo_societario) : null;
+  const tipo = empresa && ato ? tipoParaAto(empresa, ato) : null;
   const somenteLeitura = ato?.status === 'registrado';
 
   const campos = useMemo(() => (ato && tipo ? camposDoAto(ato.selecao, app.buscarClausula, tipo) : new Set<string>()), [ato, tipo, app]);
   const pendenciasDados = useMemo(
-    () => (ato && tipo ? validarDados(ato.dados_depois, campos, { tipo, opcoesAto: ato.opcoes }) : []),
+    () => (ato && tipo && def ? validarAto(ato, def, campos, tipo) : []),
     [ato, tipo, campos],
   );
   const revisao = useMemo(() => (etapa === 2 && ato && def && tipo ? revisarAto(ato, def, tipo, app.buscarClausula) : null), [etapa, ato, def, tipo, app]);
@@ -204,6 +204,13 @@ export function Assistente(p: { caminho: string; atoId: string }) {
               pendencias={pendenciasDados}
               opcoesAto={ato.opcoes}
               onChangeOpcoes={(o) => alterar((a) => ({ ...a, opcoes: { ...a.opcoes, ...o } }))}
+              tipo={tipo}
+              ato={{
+                valor: ato,
+                alterar,
+                citadas: clausulasCitadas(corposDoAto(ato.selecao, app.buscarClausula)),
+                titulo: (id) => app.buscarClausula(id)?.titulo_interno ?? id,
+              }}
             />
           </fieldset>
         </>
@@ -267,7 +274,14 @@ export function Assistente(p: { caminho: string; atoId: string }) {
 
       {registrar && (
         <ModalRegistro
-          abertura={ato.tipo_documento === 'abertura'}
+          abertura={def.efeito_registro === 'constituicao'}
+          explicacao={
+            def.efeito_registro === 'extincao'
+              ? 'Depois desta confirmação a empresa fica marcada como EXTINTA e não aceita novos documentos.'
+              : def.efeito_registro === 'transformacao'
+                ? `Depois desta confirmação a empresa passa a ser ${tipo.nome} e o cadastro vigente recebe os dados deste documento.`
+                : 'Só depois desta confirmação o cadastro vigente da empresa passa a ter os dados deste documento.'
+          }
           aoFechar={() => setRegistrar(false)}
           aoConfirmar={async (r) => {
             try {
@@ -277,7 +291,14 @@ export function Assistente(p: { caminho: string; atoId: string }) {
               if (await salvar(novoAto, nova)) {
                 setEmpresa({ ...nova });
                 setRegistrar(false);
-                app.avisar('ok', 'Ato marcado como registrado. O cadastro vigente da empresa foi atualizado.');
+                app.avisar(
+                  'ok',
+                  def.efeito_registro === 'extincao'
+                    ? 'Distrato registrado: a empresa foi marcada como extinta.'
+                    : def.efeito_registro === 'transformacao'
+                      ? `Transformação registrada: a empresa agora é ${tipo.nome}.`
+                      : 'Ato marcado como registrado. O cadastro vigente da empresa foi atualizado.',
+                );
               }
             } catch (e) {
               app.avisar('erro', mensagemDeErro(e));
@@ -291,6 +312,7 @@ export function Assistente(p: { caminho: string; atoId: string }) {
 
 function ModalRegistro(p: {
   abertura: boolean;
+  explicacao: string;
   aoFechar: () => void;
   aoConfirmar: (r: { data: string; numero: string; nire: string; cnpj: string }) => void;
 }) {
@@ -311,7 +333,7 @@ function ModalRegistro(p: {
         </>
       }
     >
-      <p>Só depois desta confirmação o cadastro vigente da empresa passa a ter os dados deste documento.</p>
+      <p>{p.explicacao}</p>
       <div className="grade">
         <CampoData rotulo="Data do registro" valor={data} onChange={setData} />
         <CampoTexto rotulo="Número do registro / protocolo" valor={numero} onChange={setNumero} />

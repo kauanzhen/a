@@ -1,6 +1,6 @@
 # Calango — notas para o Claude
 
-Gerador de atos societários (LTDA) que roda só no navegador (Edge), aberto direto do disco/rede (`file://`), sem servidor. Especificação: `ESPECIFICACAO_CALANGO.md` (trabalhar **uma fase por vez** e parar para aprovação). Relatório da fase atual: `FASE-1.md`. Guia do usuário: `LEIA-ME.md`. O usuário não é programador: explique em português simples e pergunte antes de decisões estruturais fora da especificação.
+Gerador de atos societários (LTDA e empresário individual) que roda só no navegador (Edge), aberto direto do disco/rede (`file://`), sem servidor. Especificação: `ESPECIFICACAO_CALANGO.md` (trabalhar **uma fase por vez** e parar para aprovação). Relatórios: `FASE-1.md` (abertura) e `FASES-2-3.md` (alteração com consolidação, distrato, transformações EI ↔ LTDA). Próxima: Fase 4 (captura de dados por IA). Guia do usuário: `LEIA-ME.md`. O usuário não é programador: explique em português simples e pergunte antes de decisões estruturais fora da especificação.
 
 ## Comandos (em `codigo/`)
 - `npm test` — Vitest (`src/**/*.test.ts`)
@@ -17,7 +17,8 @@ Gerador de atos societários (LTDA) que roda só no navegador (Edge), aberto dir
 - `biblioteca/` biblioteca inicial (a partir de `modelos/`) e regras de edição/versões.
 - `armazenamento/` File System Access API, repositório (backup em `backups/AAAA-MM-DD`, conflito por data de modificação, 30 dias), exportação/importação, configurações.
 - `docx/` geração com docx.js (estilos nomeados, numeração como texto, cabeçalho/rodapé).
-- `servicos/` regras dos atos (seleção padrão, revisão/pendências, gerado/registrado).
+- `servicos/` regras dos atos: seleção padrão (inclusive a partir do contrato vigente), revisão/pendências, início de atos sobre empresa existente, gerado/registrado e o efeito do registro (`efeito_registro` na definição do documento).
+- `dados/movimentos.ts` aplica aumentos/reduções/cessões sobre o quadro vigente (o novo quadro nunca é digitado na alteração).
 - `interface/` React (telas em `telas/`, componentes em `componentes/`).
 
 ## Convenções
@@ -26,5 +27,7 @@ Gerador de atos societários (LTDA) que roda só no navegador (Edge), aberto dir
 - Toda gravação passa pelo `Repositorio` (backup + conferência de conflito). Nunca apagar sem confirmação.
 - O cadastro vigente só muda quando o ato é marcado como `registrado`.
 - Nova variável/condição/lista: declarar em `motor/catalogo.ts` com os `campos` de que depende (o formulário é montado a partir disso).
-- Alterou o texto de uma cláusula da biblioteca inicial? Rode os testes de aceite (`src/biblioteca/biblioteca.test.ts`). A biblioteca inicial só é gravada em pastas de dados novas; pastas existentes mantêm as cláusulas do usuário.
+- Alterou o texto de uma cláusula da biblioteca inicial? Rode os testes de aceite (`src/biblioteca/biblioteca.test.ts` e `src/servicos/fases23.test.ts`).
 - Formulários: alterações devem partir do valor mais recente (ref `atual` em `FormularioDados`, atualizadores em `PessoaForm`), para duas mudanças seguidas não se apagarem.
+- Atos sobre empresa existente: `ato.dados_antes` = cadastro vigente; nas cláusulas, `anterior.` lê o valor antigo, `mudou_*` compara, `clausula_vigente.<id>` cita a numeração do contrato vigente (`DadosEmpresa.numeracao_clausulas`, gravada no registro a partir da área `area_contrato_vigente`).
+- Mudou um bloco da biblioteca inicial? `Repositorio.atualizarBiblioteca` leva o texto novo às pastas de dados existentes, só para cláusulas que o usuário nunca editou.

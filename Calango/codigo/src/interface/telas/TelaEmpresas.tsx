@@ -15,9 +15,9 @@ export function TelaEmpresas() {
     .filter((l) => !q || normalizar(`${nomeDaEmpresa(l.dados)} ${l.dados.vigente?.cnpj ?? ''}`).includes(q))
     .sort((a, b) => nomeDaEmpresa(a.dados).localeCompare(nomeDaEmpresa(b.dados)));
 
-  async function cadastrarExistente() {
+  async function cadastrarExistente(tipo: 'ltda' | 'ei') {
     try {
-      const e = novaEmpresa('ltda');
+      const e = novaEmpresa(tipo);
       e.vigente = dadosVazios();
       e.vigente.junta_uf = sessao.config.dados.padroes.uf;
       const caminho = sessao.repo.novoCaminhoEmpresa(e, '');
@@ -34,7 +34,8 @@ export function TelaEmpresas() {
       <div className="entre">
         <h1>Empresas</h1>
         <div className="linha">
-          <button onClick={cadastrarExistente}>+ Cadastrar empresa já registrada</button>
+          <button onClick={() => cadastrarExistente('ltda')}>+ Cadastrar LTDA já registrada</button>
+          <button onClick={() => cadastrarExistente('ei')}>+ Cadastrar empresário individual</button>
           <button className="primario" onClick={() => ir({ nome: 'novo-documento' })}>
             + Nova abertura
           </button>
@@ -51,6 +52,7 @@ export function TelaEmpresas() {
               <tr>
                 <th>Razão social</th>
                 <th>CNPJ</th>
+                <th>Tipo</th>
                 <th>Situação</th>
                 <th>Sócios</th>
                 <th>Atos</th>
@@ -67,10 +69,11 @@ export function TelaEmpresas() {
                       <strong>{nomeDaEmpresa(l.dados)}</strong>
                     </td>
                     <td>{l.dados.vigente?.cnpj ? formatarCNPJ(l.dados.vigente.cnpj) : <span className="suave">—</span>}</td>
+                    <td>{l.dados.tipo_societario === 'ei' ? 'EI' : 'LTDA'}</td>
                     <td>
-                      <span className={`etiqueta ${l.dados.vigente ? 'verde' : 'amarela'}`}>{situacaoCadastro(l.dados)}</span>
+                      <span className={`etiqueta ${l.dados.extinta_em ? 'vermelha' : l.dados.vigente ? 'verde' : 'amarela'}`}>{situacaoCadastro(l.dados)}</span>
                     </td>
-                    <td>{s === 'unipessoal' ? 'Unipessoal' : s === 'pluripessoal' ? 'Pluripessoal' : '—'}</td>
+                    <td>{l.dados.tipo_societario === 'ei' ? 'Titular' : s === 'unipessoal' ? 'Unipessoal' : s === 'pluripessoal' ? 'Pluripessoal' : '—'}</td>
                     <td>{l.dados.atos.length}</td>
                     <td>
                       <button className="pequeno" onClick={() => ir({ nome: 'empresa', caminho: l.caminho })}>
