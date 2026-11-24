@@ -1,12 +1,12 @@
 # Calango — notas para o Claude
 
-Gerador de atos societários (LTDA e empresário individual) que roda só no navegador (Edge), aberto direto do disco/rede (`file://`), sem servidor. Especificação: `ESPECIFICACAO_CALANGO.md` (trabalhar **uma fase por vez** e parar para aprovação). Relatórios: `FASE-1.md` (abertura) e `FASES-2-3.md` (alteração com consolidação, distrato, transformações EI ↔ LTDA). Próxima: Fase 4 (captura de dados por IA). Guia do usuário: `LEIA-ME.md`. O usuário não é programador: explique em português simples e pergunte antes de decisões estruturais fora da especificação.
+Gerador de atos societários (LTDA e empresário individual) que roda só no navegador (Edge), aberto direto do disco/rede (`file://`), sem servidor. Especificação: `ESPECIFICACAO_CALANGO.md` (trabalhar **uma fase por vez** e parar para aprovação). Relatórios: `FASE-1.md` (abertura), `FASES-2-3.md` (alteração com consolidação, distrato, transformações EI ↔ LTDA) e `FASE-4.md` (leitura de documentos por IA). Próxima: Fase 5 (importação de contratos existentes — ainda a planejar com o usuário). Guia do usuário: `LEIA-ME.md`. O usuário não é programador: explique em português simples e pergunte antes de decisões estruturais fora da especificação.
 
 ## Comandos (em `codigo/`)
 - `npm test` — Vitest (`src/**/*.test.ts`)
 - `npm run typecheck` — `tsc --noEmit`
 - `npm run build` — typecheck + gera **`../sistema/index.html`** (arquivo único, tudo embutido; é o que o usuário abre). Sempre recompilar e versionar o `sistema/index.html` junto com mudanças no código.
-- `npm run test:navegador` — build + teste Playwright do fluxo completo (precisa de `LANG=C.UTF-8` neste ambiente para nomes de arquivo com acento).
+- `npm run test:navegador` — build + testes Playwright: fluxo completo (`fluxo-abertura.cjs`) e leitura por IA com os provedores simulados (`leitura-ia.cjs`). Precisa de `LANG=C.UTF-8` neste ambiente para nomes de arquivo com acento.
 
 ## Estrutura (`codigo/src/`)
 - `lib/` dinheiro (sempre **centavos inteiros**), datas (`AAAA-MM-DD`), texto.
@@ -19,6 +19,7 @@ Gerador de atos societários (LTDA e empresário individual) que roda só no nav
 - `docx/` geração com docx.js (estilos nomeados, numeração como texto, cabeçalho/rodapé).
 - `servicos/` regras dos atos: seleção padrão (inclusive a partir do contrato vigente), revisão/pendências, início de atos sobre empresa existente, gerado/registrado e o efeito do registro (`efeito_registro` na definição do documento).
 - `dados/movimentos.ts` aplica aumentos/reduções/cessões sobre o quadro vigente (o novo quadro nunca é digitado na alteração).
+- `ia/` leitura de documentos por IA (Fase 4): `provedores.ts` (Claude pela biblioteca oficial `@anthropic-ai/sdk` com `dangerouslyAllowBrowser`; Gemini por REST), `prompt.ts`, `arquivos.ts` (tipo pelo conteúdo, redução de fotos), `interpretar.ts` (conferência: CPF, CEP, UF, data, comprovante em nome de outra pessoa) e `tipos.ts` (aviso obrigatório, sugestões de modelo, esquema JSON, `ErroIA`). A tela é `interface/componentes/LeituraIA.tsx`, aberta pelo `PessoaForm`.
 - `interface/` React (telas em `telas/`, componentes em `componentes/`).
 
 ## Convenções
@@ -31,3 +32,4 @@ Gerador de atos societários (LTDA e empresário individual) que roda só no nav
 - Formulários: alterações devem partir do valor mais recente (ref `atual` em `FormularioDados`, atualizadores em `PessoaForm`), para duas mudanças seguidas não se apagarem.
 - Atos sobre empresa existente: `ato.dados_antes` = cadastro vigente; nas cláusulas, `anterior.` lê o valor antigo, `mudou_*` compara, `clausula_vigente.<id>` cita a numeração do contrato vigente (`DadosEmpresa.numeracao_clausulas`, gravada no registro a partir da área `area_contrato_vigente`).
 - Mudou um bloco da biblioteca inicial? `Repositorio.atualizarBiblioteca` leva o texto novo às pastas de dados existentes, só para cláusulas que o usuário nunca editou.
+- IA: o aviso antes do envio (`AVISO_ENVIO`) é texto da especificação — não reescrever. A confirmação vale para um envio. Nada da IA vai para o cadastro sem a tela de revisão; a gravação continua dependendo do "salvar" normal. A chave de API nunca vai na exportação (`exportacao.ts`). Testes da IA usam `fetch` falso (opção `fetch` de `lerDocumentos`/`listarModelos`) — não há chamadas reais.

@@ -191,3 +191,13 @@ textarea.corpo-clausula { font-family: Consolas, 'Courier New', monospace; font-
 .tela-centro { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 2rem; }
 .tela-centro .painel { max-width: 640px; width: 100%; padding: 2rem; }
 .vazio { padding: 2rem; text-align: center; color: var(--texto-suave); }
+
+/* ---------- Leitura por IA ---------- */
+label.campo.destaque-ia input, label.campo.destaque-ia select { background: #fff8d6; border-color: #d9a520; }
+.etiqueta-ia { font-weight: 400; font-size: 0.8rem; color: var(--aviso); }
+table.revisao-ia td, table.revisao-ia th { vertical-align: middle; }
+table.revisao-ia td.lido input, table.revisao-ia td.lido select { background: #fff8d6; border-color: #d9a520; }
+table.revisao-ia tr.ignorado td.lido input, table.revisao-ia tr.ignorado td.lido select { background: #fff; border-color: var(--borda); opacity: 0.6; }
+.lista-arquivos-ia { list-style: none; padding: 0; margin: 0.5rem 0; }
+.lista-arquivos-ia li { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; padding: 0.35rem 0.5rem; border: 1px solid var(--borda); border-radius: var(--raio); margin-bottom: 0.35rem; background: #fff; }
+.aviso-envio-ia { border: 2px solid #d9a520; background: var(--aviso-claro); border-radius: var(--raio); padding: 0.8rem 1rem; margin: 0.75rem 0; }

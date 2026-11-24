@@ -36,7 +36,10 @@ export interface Configuracoes {
     cidade: string;
     uf: string;
   };
-  /** Fase 4 (captura de dados por IA) — ainda sem uso. */
+  /**
+   * Leitura de documentos por IA (Fase 4). A chave fica neste arquivo, na
+   * pasta de dados (o usuário é avisado); não vai nos pacotes de exportação.
+   */
   ia: { provedor: '' | 'claude' | 'gemini'; modelo: string; chave: string };
 }
 

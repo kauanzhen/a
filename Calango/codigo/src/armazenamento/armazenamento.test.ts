@@ -127,6 +127,24 @@ describe('exportar e importar', () => {
     const denovo = await analisarImportacao(b.repo, pacote);
     expect(denovo.find((i) => i.tipo === 'empresa')!.existe).toBe(true);
   });
+  it('não leva a chave de API da IA no pacote e mantém a chave da pasta de destino', async () => {
+    const a = criar();
+    await a.repo.inicializar();
+    const cfgA = await a.repo.carregarConfiguracoes();
+    await a.repo.salvarConfiguracoes({ ...cfgA.dados, ia: { provedor: 'claude', modelo: 'claude-opus-5-5', chave: 'sk-ant-segredo-A' } }, cfgA.modificadoEm);
+    const texto = JSON.stringify(await exportar(a.repo, 'tudo'));
+    expect(texto).not.toContain('sk-ant-segredo-A');
+    const pacote = lerPacote(texto);
+    expect(pacote.configuracoes!.ia).toEqual({ provedor: 'claude', modelo: 'claude-opus-5-5', chave: '' });
+
+    const b = criar();
+    await b.repo.inicializar();
+    const cfgB = await b.repo.carregarConfiguracoes();
+    await b.repo.salvarConfiguracoes({ ...cfgB.dados, ia: { provedor: 'gemini', modelo: 'x', chave: 'chave-B' } }, cfgB.modificadoEm);
+    const r = await importar(b.repo, pacote, new Set(['configuracoes']));
+    expect(r.erros).toEqual([]);
+    expect((await b.repo.carregarConfiguracoes()).dados.ia).toEqual({ provedor: 'claude', modelo: 'claude-opus-5-5', chave: 'chave-B' });
+  });
   it('recusa arquivo que não é do Calango', () => {
     expect(() => lerPacote('{"x":1}')).toThrow(/não é uma exportação do Calango/);
     expect(() => lerPacote('nada')).toThrow(/JSON válido/);

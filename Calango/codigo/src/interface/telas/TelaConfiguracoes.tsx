@@ -6,6 +6,8 @@ import { dimensoes, tipoDaImagem } from '../imagens';
 import { Alerta, CampoAreaTexto, CampoMarcar, CampoNumero, CampoSelecao, CampoTexto, CampoUF } from '../componentes/Campos';
 import { VisualizacaoDocumento } from '../componentes/VisualizacaoDocumento';
 import { gerarAbertura } from '../previa';
+import { AVISO_CHAVE, AVISO_ENVIO, ErroIA, MODELO_PADRAO, PROVEDORES, type ProvedorIA } from '../../ia/tipos';
+import { listarModelos } from '../../ia/provedores';
 
 const ALINHAMENTOS: { valor: Alinhamento; rotulo: string }[] = [
   { valor: 'esquerda', rotulo: 'À esquerda' },
@@ -199,6 +201,8 @@ export function TelaConfiguracoes() {
             <CampoSelecao rotulo="Alinhamento" valor={cfg.rodape.alinhamento} onChange={(v) => mudar((c) => ({ ...c, rodape: { ...c.rodape, alinhamento: v } }))} opcoes={ALINHAMENTOS} />
           </div>
 
+          <PainelIA cfg={cfg} mudar={mudar} />
+
           <div className="painel">
             <h2>Valores padrão</h2>
             <p className="suave pequeno">Usados para preencher automaticamente o local do documento, o foro e a Junta Comercial em novas aberturas.</p>
@@ -225,5 +229,141 @@ export function TelaConfiguracoes() {
         </div>
       </div>
     </>
+  );
+}
+
+function PainelIA({ cfg, mudar }: { cfg: Configuracoes; mudar: (fn: (c: Configuracoes) => Configuracoes) => void }) {
+  const ia = cfg.ia;
+  const [verChave, setVerChave] = useState(false);
+  const [testando, setTestando] = useState(false);
+  const [teste, setTeste] = useState<{ ok: boolean; texto: string; modelos?: string[] } | null>(null);
+  const provedor = PROVEDORES.find((x) => x.valor === ia.provedor);
+  const mudarIA = (parcial: Partial<Configuracoes['ia']>) => {
+    setTeste(null);
+    mudar((c) => ({ ...c, ia: { ...c.ia, ...parcial } }));
+  };
+
+  const trocarProvedor = (v: '' | ProvedorIA) => {
+    const padroes = Object.values(MODELO_PADRAO);
+    // Troca a sugestão de modelo junto, a não ser que o usuário tenha digitado outro.
+    const modelo = v && (!ia.modelo.trim() || padroes.includes(ia.modelo.trim())) ? MODELO_PADRAO[v] : ia.modelo;
+    const trocou = v !== ia.provedor;
+    if (trocou && ia.chave && !window.confirm('Trocar de serviço apaga a chave de API atual (ela é de outro provedor). Continuar?')) return;
+    mudarIA({ provedor: v, modelo, chave: trocou ? '' : ia.chave });
+  };
+
+  async function testar() {
+    setTestando(true);
+    setTeste(null);
+    try {
+      const modelos = await listarModelos(ia);
+      const tem = modelos.includes(ia.modelo.trim());
+      setTeste({
+        ok: tem,
+        texto: tem
+          ? `Chave aceita. O modelo “${ia.modelo}” está disponível. Lembre de salvar as configurações.`
+          : `Chave aceita, mas o modelo “${ia.modelo || '(vazio)'}” não aparece na lista desta chave. Escolha um dos modelos abaixo (ou mantenha, se for um apelido aceito pelo provedor).`,
+        modelos,
+      });
+    } catch (e) {
+      setTeste({ ok: false, texto: e instanceof ErroIA ? e.message : String(e) });
+    } finally {
+      setTestando(false);
+    }
+  }
+
+  return (
+    <div className="painel">
+      <h2>Leitura de documentos por IA</h2>
+      <p className="suave pequeno">
+        Lê fotos ou PDFs do RG, CNH, CIN e do comprovante de residência e preenche o cadastro da pessoa (botão “Preencher com documentos (IA)”). Você sempre confere os
+        dados antes de usar. Opcional: sem configurar, nada muda.
+      </p>
+      <div className="grade">
+        <CampoSelecao
+          rotulo="Serviço"
+          valor={ia.provedor}
+          vazio="Desligada (não usar IA)"
+          onChange={(v) => trocarProvedor(v as '' | ProvedorIA)}
+          opcoes={PROVEDORES.map((x) => ({ valor: x.valor, rotulo: `${x.rotulo} (${x.empresa})` }))}
+        />
+        {provedor && (
+          <label className="campo">
+            <span>Modelo</span>
+            <input type="text" list="modelos-ia" value={ia.modelo} placeholder={MODELO_PADRAO[provedor.valor]} onChange={(e) => mudarIA({ modelo: e.target.value.trim() })} />
+            <datalist id="modelos-ia">
+              {(teste?.modelos ?? []).map((m) => (
+                <option key={m} value={m} />
+              ))}
+            </datalist>
+            <span className="dica">
+              Sugestão: <code>{MODELO_PADRAO[provedor.valor]}</code>
+              {ia.modelo !== MODELO_PADRAO[provedor.valor] && (
+                <>
+                  {' '}
+                  <button className="link" onClick={() => mudarIA({ modelo: MODELO_PADRAO[provedor.valor] })}>
+                    usar a sugestão
+                  </button>
+                </>
+              )}
+              . Quando o provedor lançar modelos novos, basta trocar o nome aqui.
+            </span>
+          </label>
+        )}
+      </div>
+      {provedor && (
+        <>
+          <label className="campo" style={{ marginTop: '0.75rem' }}>
+            <span>Chave de API do {provedor.rotulo}</span>
+            <div className="linha" style={{ flexWrap: 'nowrap' }}>
+              <input
+                type={verChave ? 'text' : 'password'}
+                value={ia.chave}
+                autoComplete="off"
+                spellCheck={false}
+                placeholder="Cole aqui a chave"
+                onChange={(e) => mudarIA({ chave: e.target.value.trim() })}
+              />
+              <button className="pequeno" onClick={() => setVerChave((v) => !v)}>
+                {verChave ? 'Esconder' : 'Mostrar'}
+              </button>
+            </div>
+            <span className="dica">Onde obter: {provedor.ondeObterChave}. O uso é cobrado na conta do escritório nesse provedor.</span>
+          </label>
+          <Alerta tipo="aviso" titulo="Sobre a chave:">
+            {AVISO_CHAVE}
+          </Alerta>
+          <Alerta tipo="info" titulo="Antes de cada envio, o Calango mostra este aviso e pede confirmação:">
+            “{AVISO_ENVIO}”
+          </Alerta>
+          <div className="linha">
+            <button onClick={testar} disabled={testando || !ia.chave}>
+              {testando ? 'Testando…' : '🔌 Testar chave e ver modelos'}
+            </button>
+          </div>
+          {teste && (
+            <Alerta tipo={teste.ok ? 'ok' : 'aviso'}>
+              {teste.texto}
+              {!teste.ok && teste.modelos && teste.modelos.length > 0 && (
+                <div className="linha" style={{ marginTop: '0.5rem' }}>
+                  {teste.modelos.slice(0, 30).map((m) => (
+                    <button
+                      key={m}
+                      className="pequeno"
+                      onClick={() => {
+                        mudar((c) => ({ ...c, ia: { ...c.ia, modelo: m } }));
+                        setTeste({ ok: true, texto: `Modelo “${m}” escolhido. Lembre de salvar as configurações.`, modelos: teste.modelos });
+                      }}
+                    >
+                      {m}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </Alerta>
+          )}
+        </>
+      )}
+    </div>
   );
 }

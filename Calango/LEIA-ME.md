@@ -15,6 +15,7 @@ O Calango monta contratos sociais, alterações contratuais com consolidação, 
 | `LEIA-ME.md` | Este guia. |
 | `FASE-1.md` | O que foi feito na Fase 1 (abertura) e os pontos que precisam da sua decisão. |
 | `FASES-2-3.md` | O que foi feito nas Fases 2 (alteração) e 3 (distrato e transformação). |
+| `FASE-4.md` | O que foi feito na Fase 4 (leitura de documentos por IA). |
 | `ESPECIFICACAO_CALANGO.md` | A especificação completa do projeto. |
 | `codigo/` | O código-fonte (só para quem for dar manutenção). |
 
@@ -174,7 +175,40 @@ Em **Biblioteca de cláusulas** você pode criar, editar, duplicar e arquivar cl
 
 ---
 
-## 11. Backup e segurança dos dados
+## 11. Leitura de documentos por IA (opcional)
+
+O Calango pode ler fotos ou PDFs do **RG, CNH, CIN** e do **comprovante de residência** e preencher o cadastro da pessoa (nome, CPF, RG, nascimento, naturalidade, endereço...). **Você sempre confere os dados antes de usar.** Sem configurar, nada muda: o resto do sistema funciona sem internet.
+
+### Configurar (uma vez)
+
+1. Em **⚙️ Configurações → Leitura de documentos por IA**, escolha o serviço:
+   - **Claude** (empresa Anthropic): a chave é criada em *platform.claude.com*, menu *API Keys*.
+   - **Gemini** (empresa Google): a chave é criada em *aistudio.google.com*, menu *Get API key*.
+2. O campo **Modelo** já vem com uma sugestão (`claude-opus-5-5` ou `gemini-flash-latest`). Quando o provedor lançar modelos novos, basta trocar o nome ali.
+3. Cole a **chave de API** e clique em **🔌 Testar chave e ver modelos**. Se o modelo não estiver na lista da chave, o Calango mostra os modelos disponíveis para você escolher.
+4. Clique em **💾 Salvar configurações**.
+
+> ⚠️ **Sobre a chave:** ela fica gravada no arquivo `configuracoes.json` da pasta de dados (e nas cópias de `backups/`). **Qualquer pessoa com acesso a essa pasta pode vê-la e usá-la**, e o uso é cobrado na conta do escritório no provedor. A chave **não vai** nos arquivos de exportação.
+
+### Usar
+
+1. No cadastro de qualquer pessoa (sócio, administrador, titular), clique em **📷 Preencher com documentos (IA)**.
+2. Escolha os arquivos de **uma pessoa**: fotos (JPG, PNG) ou PDF; frente e verso podem ir separados (até 6 arquivos). Fotos de iPhone no formato HEIC precisam ser enviadas como JPG.
+3. Leia o aviso e marque **“confirmo que o cliente autorizou”**. O aviso diz:
+   > "Os documentos selecionados serão enviados a um serviço externo (Anthropic ou Google) para leitura automática. O uso desses dados, inclusive para treinamento de modelos de IA, depende dos termos do plano contratado com o provedor. Em planos gratuitos, os dados podem ser usados para treinamento e revisados por pessoas. Confirme que o cliente autorizou este tratamento de dados."
+
+   A confirmação vale para **um envio**: a cada novo envio, é preciso marcar de novo.
+4. Clique em **Enviar para leitura** e aguarde (até cerca de um minuto).
+5. **Tela de revisão:** para cada campo aparecem o que já está no cadastro e o que foi lido (em amarelo, e pode ser corrigido ali). Desmarque o que não quiser usar. O Calango avisa, por exemplo:
+   - CPF que não confere (dígito verificador);
+   - comprovante de residência **em nome de outra pessoa**;
+   - documento ilegível ou documentos de pessoas diferentes.
+6. Clique em **Usar N campos marcados**. Os campos preenchidos ficam **em amarelo** no formulário até você mexer neles ou clicar em **Já conferi**.
+7. Nada é gravado até você **salvar** a tela (Salvar rascunho, Salvar cadastro), como sempre.
+
+---
+
+## 12. Backup e segurança dos dados
 
 - **Backup automático:** antes de gravar qualquer arquivo, o Calango guarda a versão anterior em `dados/backups/AAAA-MM-DD/`. Os backups com mais de **30 dias** são apagados automaticamente.
 - **Para recuperar um arquivo:**
@@ -191,7 +225,7 @@ Cada empresa é um arquivo separado. Se duas pessoas alterarem a mesma empresa a
 
 ---
 
-## 12. Problemas comuns
+## 13. Problemas comuns
 
 | O que aparece | O que fazer |
 |---|---|
@@ -204,3 +238,8 @@ Cada empresa é um arquivo separado. Se duas pessoas alterarem a mesma empresa a
 | "Já existe um documento em andamento para esta empresa" | Conclua (marque como registrado) ou apague o documento em andamento, na tela da empresa. |
 | "Nenhuma alteração foi feita" | Numa alteração, mude na Etapa 2 o que deve ser alterado (endereço, capital, sócios...). |
 | "Falta preencher: número da cláusula ... no contrato vigente" | Informe o número na seção “Alteração → Contrato vigente” da Etapa 2. |
+| Leitura por IA: "A chave de API ... foi recusada" | A chave está errada, foi apagada ou foi copiada pela metade. Gere outra no site do provedor e cole em Configurações. |
+| Leitura por IA: "O modelo ... não existe ou não está liberado" | Em Configurações, clique em **Testar chave e ver modelos** e escolha um modelo da lista. |
+| Leitura por IA: "Não foi possível falar com o serviço" | Confira a internet. Se a rede do escritório tiver bloqueio de sites, peça a liberação de `api.anthropic.com` (Claude) ou `generativelanguage.googleapis.com` (Gemini). |
+| Leitura por IA: "limite de uso" ou "sem crédito" | Espere um minuto e tente de novo; se continuar, confira o plano e o faturamento da conta no provedor. |
+| Leitura por IA: "Não foi possível ler os dados destes documentos" | Tire fotos mais nítidas: documento inteiro, sem reflexo, com boa luz. Ou preencha à mão. |

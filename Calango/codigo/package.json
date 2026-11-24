@@ -10,9 +10,10 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:navegador": "npm run build && node testes-navegador/fluxo-abertura.cjs"
+    "test:navegador": "npm run build && node testes-navegador/fluxo-abertura.cjs && node testes-navegador/leitura-ia.cjs"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^1.13.0",
     "docx": "^9.5.1",
     "react": "19.1",
     "react-dom": "19.1"

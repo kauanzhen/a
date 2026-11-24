@@ -11,12 +11,17 @@ interface Base {
   dica?: ReactNode;
   erro?: string;
   largo?: boolean;
+  /** Valor preenchido pela leitura por IA e ainda não conferido: destaca o campo. */
+  destaque?: boolean;
 }
 
-export function Rotulo({ rotulo, dica, erro, largo, children }: Base & { children: ReactNode }) {
+export function Rotulo({ rotulo, dica, erro, largo, destaque, children }: Base & { children: ReactNode }) {
   return (
-    <label className="campo" style={largo ? { gridColumn: '1 / -1' } : undefined}>
-      <span>{rotulo}</span>
+    <label className={`campo${destaque ? ' destaque-ia' : ''}`} style={largo ? { gridColumn: '1 / -1' } : undefined}>
+      <span>
+        {rotulo}
+        {destaque && <span className="etiqueta-ia"> · lido pela IA, confira</span>}
+      </span>
       {children}
       {dica && <span className="dica">{dica}</span>}
       {erro && <span className="erro-campo">{erro}</span>}
@@ -166,18 +171,19 @@ export function OpcoesRadio<T extends string>(p: { nome: string; valor: T; onCha
 }
 
 /** Emite só a parte alterada; quem usa junta com o valor mais recente. */
-export function CamposEndereco(p: { valor: Endereco; onChange: (parcial: Partial<Endereco>) => void; erro?: string }) {
+export function CamposEndereco(p: { valor: Endereco; onChange: (parcial: Partial<Endereco>) => void; erro?: string; destaques?: Set<string> }) {
   const e = p.valor;
   const mudar = (parcial: Partial<Endereco>) => p.onChange(parcial);
+  const d = (c: keyof Endereco) => p.destaques?.has(c) ?? false;
   return (
     <div className="grade">
-      <CampoTexto rotulo="Logradouro" dica="Com o tipo: Rua, Avenida, Alameda..." valor={e.logradouro} onChange={(v) => mudar({ logradouro: v })} />
-      <CampoTexto rotulo="Número" dica="Deixe vazio se não houver (fica s/nº)" valor={e.numero} onChange={(v) => mudar({ numero: v })} />
-      <CampoTexto rotulo="Complemento" dica="Opcional" valor={e.complemento} onChange={(v) => mudar({ complemento: v })} />
-      <CampoTexto rotulo="Bairro" valor={e.bairro} onChange={(v) => mudar({ bairro: v })} />
-      <CampoTexto rotulo="Cidade" valor={e.cidade} onChange={(v) => mudar({ cidade: v })} />
-      <CampoUF rotulo="UF" valor={e.uf} onChange={(v) => mudar({ uf: v })} />
-      <CampoTexto rotulo="CEP" valor={e.cep} placeholder="00000-000" onChange={(v) => mudar({ cep: v })} onBlur={(v) => mudar({ cep: formatarCEP(v) })} />
+      <CampoTexto rotulo="Logradouro" dica="Com o tipo: Rua, Avenida, Alameda..." valor={e.logradouro} destaque={d('logradouro')} onChange={(v) => mudar({ logradouro: v })} />
+      <CampoTexto rotulo="Número" dica="Deixe vazio se não houver (fica s/nº)" valor={e.numero} destaque={d('numero')} onChange={(v) => mudar({ numero: v })} />
+      <CampoTexto rotulo="Complemento" dica="Opcional" valor={e.complemento} destaque={d('complemento')} onChange={(v) => mudar({ complemento: v })} />
+      <CampoTexto rotulo="Bairro" valor={e.bairro} destaque={d('bairro')} onChange={(v) => mudar({ bairro: v })} />
+      <CampoTexto rotulo="Cidade" valor={e.cidade} destaque={d('cidade')} onChange={(v) => mudar({ cidade: v })} />
+      <CampoUF rotulo="UF" valor={e.uf} destaque={d('uf')} onChange={(v) => mudar({ uf: v })} />
+      <CampoTexto rotulo="CEP" valor={e.cep} placeholder="00000-000" destaque={d('cep')} onChange={(v) => mudar({ cep: v })} onBlur={(v) => mudar({ cep: formatarCEP(v) })} />
       {p.erro && <div className="erro-campo" style={{ gridColumn: '1 / -1' }}>{p.erro}</div>}
     </div>
   );

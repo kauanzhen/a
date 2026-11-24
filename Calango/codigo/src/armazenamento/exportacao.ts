@@ -54,7 +54,9 @@ export async function exportar(
     if (conteudo === 'empresa' && p.empresas.length === 0) throw new Error('Empresa não encontrada para exportar.');
   }
   if (conteudo === 'tudo') {
-    p.configuracoes = (await repo.carregarConfiguracoes()).dados;
+    const cfg = (await repo.carregarConfiguracoes()).dados;
+    // A chave de API da IA nunca vai no pacote (ele pode ser enviado por e-mail).
+    p.configuracoes = { ...cfg, ia: { ...cfg.ia, chave: '' } };
     p.imagens = [];
     for (const nome of await repo.listarImagens()) {
       const dados = await repo.lerImagem(nome);
@@ -128,7 +130,15 @@ export async function importar(
     }
   };
   if (p.configuracoes && escolhidos.has('configuracoes')) {
-    await tentar('Configurações', () => repo.gravarJson('configuracoes.json', normalizarConfiguracoes(p.configuracoes)));
+    await tentar('Configurações', async () => {
+      const nova = normalizarConfiguracoes(p.configuracoes);
+      // O pacote não traz a chave de API: mantém a que já está nesta pasta.
+      if (!nova.ia.chave) {
+        const atual = await repo.carregarConfiguracoes().catch(() => null);
+        if (atual?.dados.ia.chave) nova.ia = { ...nova.ia, chave: atual.dados.ia.chave };
+      }
+      await repo.gravarJson('configuracoes.json', nova);
+    });
   }
   for (const c of p.clausulas ?? []) {
     if (!escolhidos.has(`clausula:${c.id}`)) continue;
